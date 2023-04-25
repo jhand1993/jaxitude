@@ -113,5 +113,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# vscode
+/.vscode
+
 # custom test notebooks
 test*.ipynb
+
