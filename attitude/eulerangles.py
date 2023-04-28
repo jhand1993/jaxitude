@@ -1,14 +1,14 @@
 from attitude.primitives import R1, R2, R3, Primitive
+import jax.numpy as jnp
 
 class EulerAngle(Primitive):
     """ Euler angle rotation sequence class.  Rotations are intrinsic. 
     """
-    def __init__(self, angles, order) -> None:
+    def __init__(self, angles: jnp.ndarray, order: str) -> None:
         """
         Attributes:
-            alpha (float): First rotation angle in radians. 
-            beta (float): Second rotation angle in radians.
-            gamma (float): Third rotation angle in radians
+            angles (jnp.ndarray): 1x3 matrix of Euler angles alpha, beta, 
+                and gamma.
             order (str): Order of rotations as a string.  An example includes 
                 '121', 'xyx', or 'XYX for proper x-axis, y-axis, x-axis 
                 Euler angles. 
@@ -17,7 +17,7 @@ class EulerAngle(Primitive):
             self.R_gamma (PrimitiveR): Rotation object for third rotation. 
             self.dcm (jnp.ndarray): Euler angle DCM.
         """
-        self.alpha, self.beta, self.gamma = angles
+        self.alpha, self.beta, self.gamma = angles.tolist()
         self.order = self._order_decipher(order)
         f_alpha, f_beta, f_gamma = self._order_rotations(order)
         self.R_alpha, self.R_beta, self.R_gamma = f_alpha(angles[0]), f_beta(angles[1]), f_gamma(angles[2])

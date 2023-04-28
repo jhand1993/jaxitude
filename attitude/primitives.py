@@ -3,8 +3,7 @@ All attitudes will be represented by products of primitive rotations R,
 where R is a rotation along some coordinate axis.  Here R1 will be a rotation 
 along the first coordinate component, R2 the second component, and R3 the third. 
 For example, a 3-2-1 (Z-X-Y) Euler angle rotation sequence by angles (a, b, c)
-will be:
-M(a,b,c) = R1(c)R2(b)R3(c).
+will be M(a,b,c) = R1(c)R2(b)R3(c).
 """
 import jax.numpy as jnp
 
@@ -76,11 +75,11 @@ class PRVUtil(object):
     """ Container class for PRV calculations from dcm. 
     """
     @staticmethod
-    def get_e(dcm) -> jnp.ndarray:
+    def get_e(dcm: jnp.ndarray) -> jnp.ndarray:
         """ Calculates e from dcm.
 
         Args:
-            dcm (jnp.ndarray): dcm matrix
+            dcm (jnp.ndarray): dcm 3x3 matrix
 
         Returns:
             jnp.ndarray: 3x1 array representation of e
@@ -94,11 +93,11 @@ class PRVUtil(object):
         ) * 0.5 / sinphi
 
     @staticmethod
-    def get_phi(dcm) -> float:
+    def get_phi(dcm: jnp.ndarray) -> float:
         """ Calculates phi from dcm.
 
         Args:
-            dcm (jnp.ndarray): dcm matrix
+            dcm (jnp.ndarray): dcm 3x3 matrix
 
         Returns:
             float: phi
@@ -149,23 +148,23 @@ class Primitive(object):
         """
         return float(PRVUtil.get_phi(self.dcm)) - 2. * jnp.pi, PRVUtil.get_e(self.dcm)
 
-    def get_eulerangles(self, ea_type) -> tuple:
+    def get_eulerangles(self, ea_type: str) -> jnp.ndarray:
         """ Returns a tuple of euler angles for given order from dcm.  
 
         Args: 
             ea_type (str): Euler angle type.  Needs to be of form
                 '121', '321', etc for now.
         Returns:
-            tuple: set of Euler angles
+            jnp.ndarray: 1x3 matrix of Euler angles
         """
-        return tuple(float(x) for x in eulerangle_map[ea_type](self.dcm))
+        return jnp.asarray(eulerangle_map[ea_type](self.dcm))
     
-    def _get_q_base(self) -> tuple:
-        """ Returns a tuple of quaternion parameters from dcm. Uses Shepard's method 
-            to avoid singularity at q0=0.  Doesn't decide shortest path. 
+    def _get_b_base(self) -> jnp.ndarray:
+        """ Returns a matrix of quaternion parameters from dcm. Uses Shepard's method 
+            to avoid singularity at b0=0.  Doesn't decide shortest path. 
 
         Returns:
-            tuple: Tuple of quaternion parameters. 
+            jnp.ndarray: 1x4 matrix of quaternion parameters. 
         """
         tr = jnp.trace(self.dcm)
         step1 = jnp.array(
@@ -189,44 +188,78 @@ class Primitive(object):
         )
         max_sq = jnp.sqrt(step1[max_i])
         choices = {
-            0: (max_sq, step2[0] / max_sq, step2[1] / max_sq, step2[2] / max_sq),
-            1: (step2[0] / max_sq, max_sq, step2[3] / max_sq, step2[4] / max_sq),
-            2: (step2[1] / max_sq, step2[3] / max_sq, max_sq, step2[5] / max_sq),
-            3: (step2[2] / max_sq, step2[4] / max_sq, step2[5] / max_sq, max_sq)
+            0: jnp.array(
+                [max_sq, step2[0] / max_sq, step2[1] / max_sq, step2[2] / max_sq]
+            ),
+            1: jnp.array(
+                [step2[0] / max_sq, max_sq, step2[3] / max_sq, step2[4] / max_sq]
+            ),
+            2: jnp.array(
+                [step2[1] / max_sq, step2[3] / max_sq, max_sq, step2[5] / max_sq]
+            ),
+            3: jnp.array(
+                [step2[2] / max_sq, step2[4] / max_sq, step2[5] / max_sq, max_sq]
+            )
         }
-        return tuple(float(x) for x in choices[max_i])
+        return choices[max_i]
 
-    def get_q_short(self) -> tuple:
-        """ Makes sure q0 is positive.
-
-        Returns:
-            tuple: Tuple of quaternion parameters. 
-        """
-        q_tup = self._get_q_base()
-        return tuple([float(jnp.abs(q_tup[0])), *q_tup[1:]])
-
-    def get_q_long(self) -> tuple:
-        """ Makes sure q0 is negative.
+    def get_b_short(self) -> jnp.ndarray:
+        """ Shepard's method to get b from DCM. Makes sure b0 is positive.
 
         Returns:
-            tuple: Tuple of quaternion parameters. 
+            jnp.ndarray: 1x4 matrix of quaternion parameters. 
         """
-        q_tup = self._get_q_base()
-        return tuple([-float(jnp.abs(q_tup[0])), *q_tup[1:]])
+        b = self._get_b_base()
+        return b.at[0].set(jnp.abs(b[0]))
 
-class PrimitiveR(Primitive):
+    def get_b_long(self) -> jnp.ndarray:
+        """ Shepard's method to get b from DCM. Makes sure b0 is negative.
+
+        Returns:
+            jnp.ndarray: 1x4 matrix of quaternion parameters. 
+        """
+        b = self._get_b_base()
+        return b.at[0].set(-jnp.abs(b[0]))
+
+    def get_q(self) -> jnp.ndarray:
+        """ Gets CRP q parameters from DCM. 
+
+        Returns:
+            jnp.ndarray: 1x3 matrix of CRP q parameters. 
+        """
+        zeta_squared = jnp.trace(self.dcm) + 1.
+        return jnp.array(
+            [self.dcm[1, 2] - self.dcm[2, 1], 
+             self.dcm[2, 0] - self.dcm[0, 2], 
+             self.dcm[0, 1] - self.dcm[1, 0]]
+        ) / zeta_squared
+
+    def get_s(self) -> jnp.ndarray:
+        """ Gets MRP s parameters from DCM. 
+
+        Returns:
+            jnp.ndarray: 1x3 matrix of MRP s parameters. 
+        """
+        zeta = jnp.sqrt(jnp.trace(self.dcm) + 1.)
+        return jnp.array(
+            [self.dcm[1, 2] - self.dcm[2, 1], 
+             self.dcm[2, 0] - self.dcm[0, 2], 
+             self.dcm[0, 1] - self.dcm[1, 0]]
+        ) / zeta / (zeta + 2.)
+
+class BaseR(Primitive):
     """ Fundamental coordinate axis rotation primitive subclass.  
 
     """
-    def __init__(self, angle) -> None:
+    def __init__(self, angle: float) -> None:
         """
         Attributes:
-            angle (str): Rotation angle in radians. 
+            angle (float): Rotation angle in radians. 
         """
         super().__init__()
         self.angle = angle
 
-    def inv(self):
+    def inv_copy(self):
         """ Return a new instance of the same rotation class with a negative angle.
 
         Returns:
@@ -234,13 +267,13 @@ class PrimitiveR(Primitive):
         """
         return self.__class__(-self.angle)
 
-class R1(PrimitiveR):
+class R1(BaseR):
     """ Fundamental rotation w.r.t. coordinate axis 1.
 
     Args:
-        PrimitiveR: Base class
+        BaseR: Base class
     """
-    def __init__(self, angle) -> None:
+    def __init__(self, angle: float) -> None:
         """_summary_
 
         Attibutes:
@@ -254,13 +287,13 @@ class R1(PrimitiveR):
              [0., jnp.sin(angle), jnp.cos(angle)]]
         )
 
-class R2(PrimitiveR):
+class R2(BaseR):
     """ Fundamental rotation w.r.t. coordinate axis 2.
 
     Args:
-        PrimitiveR: Base class
+        BaseR: Base class
     """
-    def __init__(self, angle) -> None:
+    def __init__(self, angle: float) -> None:
         """_summary_
 
         Attibutes:
@@ -275,13 +308,13 @@ class R2(PrimitiveR):
         )
 
 
-class R3(PrimitiveR):
+class R3(BaseR):
     """ Fundamental rotation w.r.t. coordinate axis 3.
 
     Args:
-        PrimitiveR: Base class
+        BaseR: Base class
     """
-    def __init__(self, angle) -> None:
+    def __init__(self, angle: float) -> None:
         """_summary_
 
         Attibutes:
@@ -299,9 +332,14 @@ class DCM(Primitive):
     """ Custom DCM
     
     Args:
-        PrimitiveR: Base class  
+        BaseR: Base class  
     """
-    def __init__(self, matrix) -> None:
+    def __init__(self, matrix: jnp.ndarray) -> None:
+        """ Builds custom DCM instance
+
+        Args:
+            matrix (jnp.ndarray): _description_
+        """
         super().__init__()
         self.dcm = jnp.asarray(matrix)
         assert self.dcm.shape == (3, 3), 'Invalid matrix shape.'

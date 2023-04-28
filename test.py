@@ -2,6 +2,8 @@ import unittest
 from attitude.primitives import R1, R2, R3, Primitive, DCM
 from attitude.eulerangles import EulerAngle
 from attitude.quaternions import Quaternion
+from attitude.rodrigues import CRP
+from attitude.operations.composition import compose_quat
 import jax.numpy as jnp
 
 class TestPrimitives(unittest.TestCase):
@@ -19,7 +21,8 @@ class TestPrimitives(unittest.TestCase):
         for i in range(target.shape[0]):
             for j in range(target.shape[1]):
                 self.assertAlmostEqual(
-                    test.dcm[i, j], target[i, j], places=7, msg='Incorrect R1 rotation matrix output.'
+                    test.dcm[i, j], target[i, j], 
+                    msg='Incorrect R1 rotation matrix output.'
                 )
 
     def test_R2(self):
@@ -34,7 +37,8 @@ class TestPrimitives(unittest.TestCase):
         for i in range(target.shape[0]):
             for j in range(target.shape[1]):
                 self.assertAlmostEqual(
-                    test.dcm[i, j], target[i, j], places=7, msg='Incorrect R2 rotation matrix output.'
+                    test.dcm[i, j], target[i, j], 
+                    msg='Incorrect R2 rotation matrix output.'
                 )
 
     def test_R3(self):
@@ -49,7 +53,8 @@ class TestPrimitives(unittest.TestCase):
         for i in range(target.shape[0]):
             for j in range(target.shape[1]):
                 self.assertAlmostEqual(
-                    test.dcm[i, j], target[i, j], places=7, msg='Incorrect R3 rotation matrix output.'
+                    test.dcm[i, j], target[i, j], 
+                    msg='Incorrect R3 rotation matrix output.'
                 )
     
     def test_call(self):
@@ -72,7 +77,8 @@ class TestEuler(unittest.TestCase):
         target_out = (2.7129145, 0.24619713, -2.3485403)
         for i in range(3):
             self.assertAlmostEqual(
-                test_out[i], target_out[i], msg='Error in Euler angle calculation from dcm.'
+                test_out[i], target_out[i],
+                msg='Error in Euler angle calculation from dcm.'
             )
     
 
@@ -89,9 +95,15 @@ class TestPRV(unittest.TestCase):
             [-0.12165573],
             [-0.18303284]]
         )
-        self.assertAlmostEqual(test_theta, target_theta, msg='Error in PRV calcuation from dcm.')
+        self.assertAlmostEqual(
+            test_theta, target_theta,
+            msg='Error in PRV calcuation from dcm.'
+        )
         for i in range(3):
-            self.assertAlmostEqual(test_e.flatten()[i], target_e.flatt()[i], msg='Error in PRV calcuation from dcm.')
+            self.assertAlmostEqual(
+                test_e.flatten()[i], target_e.flatt()[i],
+                msg='Error in PRV calcuation from dcm.'
+            )
 
 
 class TestQuaternions(unittest.TestCase):
@@ -110,12 +122,75 @@ class TestQuaternions(unittest.TestCase):
         )
         for i in range(3):
             for j in range(3):
-                self.assertAlmostEqual(test()[i, j], target[i, j], msg='Error in quaternion calcuation.')
+                self.assertAlmostEqual(
+                    test()[i, j], target[i, j],
+                    msg='Error in quaternion calcuation.'
+                )
     
     def test_get_q(self):
-        R = [[-0.529403, -0.474115, 0.703525], [-0.467056, -0.529403, -0.708231], [0.708231, -0.703525, 0.0588291]]
+        R = [[-0.529403, -0.474115, 0.703525],
+             [-0.467056, -0.529403, -0.708231],
+             [0.708231, -0.703525, 0.0588291]]
         test = DCM(R)
         test_q = test.get_q_short()
-        target_q = (0.002425426384434104, 0.4850696623325348, -0.4850696623325348, 0.7276048064231873)
+        target_q = (0.002425426384434104, 
+                    0.4850696623325348, 
+                    -0.4850696623325348, 
+                    0.7276048064231873)
         for i in range(4):
-            self.assertAlmostEqual(test_q[i], target_q[i], msg='Error in get q calcuation.')
+            self.assertAlmostEqual(
+                test_q[i], target_q[i], msg='Error in get quaternion b calculation.'
+            )
+
+
+class TestCRP(unittest.TestCase):
+    """ Tests for CRP operations
+    """
+    def test_q_from_dcm(self):
+        test_r = jnp.asarray(
+            [[0.333333, 0.871795, -0.358974],
+            [-0.666667, 0.487179, 0.564103],
+            [0.666667, 0.0512821, 0.74359]]
+        ).T
+        test_dcm = DCM(test_r)
+        test_q = test_dcm.get_q()
+        target_q = jnp.array([[-0.20000021, -0.40000013, -0.6000004]])
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_q[i], target_q[i], msg='Error in CVR q calculation.'
+            )
+            
+    def test_dcm_from_q(self):
+        q = jnp.array([0.1, 0.2, 0.3])
+        test_dcm = CRP(q).dcm
+        target_dcm = jnp.array(
+            [[0.7719298, 0.5614036, -0.2982456],
+            [-0.49122807, 0.82456136, 0.28070176],
+            [0.40350878, -0.07017544, 0.9122807]]
+        )
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(
+                    test_dcm[i, j], target_dcm[i, j], msg='Error in DCM calculation from q.'
+                )
+
+
+class TestCompositions(unittest.TestCase):
+    """ Test for special compositions operations.  
+    """
+    def test_compose_quat(self):
+        b_p = jnp.array([0.774597, 0.258199, 0.516398, 0.258199])
+        b_p /= jnp.linalg.norm(b_p)
+        b_pp = jnp.array([0.359211, -0.898027, -0.179605, -0.179605])
+        b_pp /= jnp.linalg.norm(b_pp)
+
+        test_b = compose_quat(b_p, b_pp)
+        target_b = jnp.array(
+            [[0.64923435, -0.64923435, -0.13912137, 0.37099165]]
+        )
+        for i in range(4):
+            self.assertAlmostEqual(
+                test_b[i], target_b[i],
+                msg='Error in direct quaternion composition.'
+            )
+    
