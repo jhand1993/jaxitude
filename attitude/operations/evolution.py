@@ -3,16 +3,16 @@
 import jax.numpy as jnp
 from jax import jit
 
-    
+@jit
 def evolve_CRP(omega_dot: jnp.ndarray, q: jnp.ndarray) -> jnp.ndarray:
-    """ Returns dq/dt biven q(t) and omega_dot(t).
+    """ Returns dq/dt given q(t) and omega_dot(t).
 
     Args:
         omega_dot (jnp.ndarray): Body angular rotation rates. 
         q (jnp.ndarray): 1x3 matrix of q parameteters.
 
     Returns:
-        jnp.ndarray: dq/dt.
+        jnp.ndarray: dq/dt at time t.
     """
     in_shape = q.shape
 
@@ -23,16 +23,36 @@ def evolve_CRP(omega_dot: jnp.ndarray, q: jnp.ndarray) -> jnp.ndarray:
     ) * 0.5
     return jnp.dot(m, omega_dot.reshape((3, 1))).reshape(in_shape)
 
+@jit
+def evolve_MRP(omega_dot: jnp.ndarray, s: jnp.ndarray) -> jnp.ndarray:
+    """Returns ds/dt given s(t) and omega_dot(t).
 
+    Args:
+        omega_dot (jnp.ndarray): Body angular rotation rates. 
+        s (jnp.ndarray): 1x3 matrix of s parameteters.
+
+    Returns:
+        jnp.ndarray: ds/dt at time t.
+    """
+    in_shape = s.shape
+    dot_s = jnp.dot(s, s)
+    m = jnp.array(
+        [[1. - dot_s + 2. * s[0]**2., 2. * (s[0] * s[1] - s[2]), 2. * (s[0] * s[2] + s[1])],
+         [2. * (s[0] * s[1] + s[2]), 1. - dot_s + 2. * s[1]**2., 2. * (s[1] * s[2] - s[0])], 
+         [2. * (s[0] * s[2] - s[1]), 2. * (s[1] * s[2] + s[0]), 1. - dot_s + 2. * s[2]**2.]]
+    ) * 0.25
+    return jnp.dot(m, omega_dot.reshape((3, 1))).reshape(in_shape)
+
+@jit
 def evolve_quat(omega_dot: jnp.ndarray, b: jnp.ndarray) -> jnp.ndarray:
-    """ Returns db/dt biven b(t) and omega_dot(t).
+    """ Returns db/dt given b(t) and omega_dot(t).
 
     Args:
         omega_dot (jnp.ndarray): Body angular rotation rates. 
         b (jnp.ndarray): 1x4 matrix of b parameteters.
 
     Returns:
-        jnp.ndarray: db/dt.
+    jnp.ndarray: db/dt at time t.
     """
     # Append zero to omega_dot rate vector
     zero = jnp.zeros((1, 1))

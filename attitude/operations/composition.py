@@ -48,3 +48,64 @@ def relative_crp(q: jnp.ndarray, q_p: jnp.ndarray) -> jnp.ndarray:
         jnp.ndarray: Relative CRP parameters as 1x3 matrix.
     """
     return compose_crp(-q_p, q)
+
+# @jit
+def compose_mrp(s_p: jnp.ndarray, s_pp: jnp.ndarray, tol=1e-2) -> jnp.ndarray:
+    """ Compose MRP parameters direclty in the following order:
+        R(s) = R(s_pp)R(s_p) for MRP rotation matrix R. If the denominator 
+        is less than tol value, either s_p or s_pp are transformed to
+        their shadow set (based on which is larger: |s_p| or |s_pp|).  
+
+    Args:
+        s_p (jnp.ndarray): First MRP parameters as 1x3 matrix.
+        s_pp (jnp.ndarray): Second MRP parameters as 1x3 matrix.
+        tol (float): Tolerance for shadow switch.
+
+    Returns:
+        jnp.ndarray: composed MRP parameters as 1x3 matrix.
+    """
+    dot_p = jnp.dot(s_p, s_p)
+    dot_pp = jnp.dot(s_pp, s_pp)
+    test_denom = 1. + dot_p * dot_pp - 2. * jnp.dot(s_p, s_pp)
+    # Nested where functions allow for this to be jitified. 
+    # First check is if the test_denom is less than the tolerance. If so, 
+    # then the second check gets shadow set of s_p if |s_p|>|s_pp|.  
+    # Otherwise, the shadow set of s_pp is used. 
+    return jnp.where(
+        test_denom < tol,
+        ((1. - dot_pp) * s_p + (1. - dot_p) * s_pp - 2. * jnp.cross(s_pp, s_p)) /\
+              (1. + dot_p * dot_pp - 2. * jnp.dot(s_p, s_pp)),
+        jnp.where(
+            dot_p > dot_pp,
+            ((1. - dot_pp) * shadow_s(s_p) + (1. - 1. / dot_p) * s_pp - 2. * jnp.cross(s_pp, shadow_s(s_p))) /\
+                  (1. + dot_pp / dot_p - 2. * jnp.dot(shadow_s(s_p), s_pp)), 
+            ((1. - 1. / dot_pp) * s_p + (1. - dot_p) * shadow_s(s_pp) - 2. * jnp.cross(shadow_s(s_pp), s_p)) /\
+                  (1. + dot_p / dot_pp - 2. * jnp.dot(s_p, shadow_s(s_pp))), 
+        )
+    )
+
+def relative_mrp(s: jnp.ndarray, s_p: jnp.ndarray, tol=1e-2) -> jnp.ndarray:
+    """ Compose MRP parameters directly in the following order:
+        R(s_pp) = R(s_p)R(s)^-1 for MRP rotation matrix R. 
+    Args:
+        s (jnp.ndarray): First MRP parameters as 1x3 matrix.
+        s_p (jnp.ndarray): Second MRP parameters as 1x3 matrix.
+        tol (float): Tolerance for shadow switch.
+
+
+    Returns:
+        jnp.ndarray: Relative MRP parameters as 1x3 matrix.
+    """
+    return compose_mrp(-s_p, s, tol=tol)
+
+@jit
+def shadow_s(s: jnp.ndarray) -> jnp.ndarray:
+    """ Return shadow set of s. 
+
+    Args:
+        s (jnp.ndarray): 1x3 matrix of MRP s parameters.
+
+    Returns:
+        jnp.ndarray: 1x3 matrix of s shadow parameters.
+    """
+    return -s / jnp.dot(s, s)

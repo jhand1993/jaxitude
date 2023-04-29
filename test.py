@@ -2,8 +2,8 @@ import unittest
 from attitude.primitives import R1, R2, R3, Primitive, DCM
 from attitude.eulerangles import EulerAngle
 from attitude.quaternions import Quaternion
-from attitude.rodrigues import CRP
-from attitude.operations.composition import compose_quat
+from attitude.rodrigues import CRP, MRP
+from attitude.operations.composition import compose_quat, relative_crp, compose_mrp
 import jax.numpy as jnp
 
 class TestPrimitives(unittest.TestCase):
@@ -174,6 +174,33 @@ class TestCRP(unittest.TestCase):
                     test_dcm[i, j], target_dcm[i, j], msg='Error in DCM calculation from q.'
                 )
 
+    def test_dcm_from_s(self):
+
+        s = jnp.array([0.1, 0.2, 0.3])
+        test_dcm = MRP(s).dcm
+        target_dcm = jnp.array(
+            [[0.19975376, 0.91720533, -0.34472147],
+            [-0.6709757, 0.38442597, 0.63404125],
+            [0.7140659, 0.10464759,  0.692213]]
+        )
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(
+                    test_dcm[i, j], target_dcm[i, j], msg='Error in DCM calculation from s.'
+                )
+    
+    def test_s_from_dcm(self):
+        test_r = jnp.array(
+            [[0.763314, 0.568047, -0.307692],
+            [-0.0946746, -0.372781, -0.923077],
+            [-0.639053, 0.733728, -0.230769]]
+        )
+        test_s = DCM(test_r).get_s
+        target_s = jnp.array([-0.4999999, -0.09999997, 0.19999984])
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_s[i], target_s[i], msg='Error in MVR s calculation.'
+            )
 
 class TestCompositions(unittest.TestCase):
     """ Test for special compositions operations.  
@@ -194,3 +221,24 @@ class TestCompositions(unittest.TestCase):
                 msg='Error in direct quaternion composition.'
             )
     
+    def test_compose_CRP(self):
+        q1 = jnp.array([0.1, 0.2, 0.3])
+        q2 = jnp.array([-0.3,0.3,0.1])
+        test_q = relative_crp(q2, q1)
+        target_q = jnp.array([-0.31132078, 0.18867928, -0.27358493])
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_q[i], target_q[i],
+                msg='Error in direct CRP q composition.'
+            )
+
+    def test_compose_MRP(self):
+        s1 = jnp.array([0.1, 0.2, 0.3])
+        s2 = jnp.array([0.5, 0.3, 0.1])
+        test_s = compose_mrp(s1, s2)
+        target_s = jnp.array([-0.16015896, 0.41617954, 0.5295768])
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_s[i], target_s[i],
+                msg='Error in direct MRP s composition.'
+            )

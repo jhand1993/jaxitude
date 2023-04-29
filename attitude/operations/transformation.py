@@ -31,3 +31,15 @@ def q_from_cayley(dcm: jnp.ndarray) -> jnp.ndarray:
     """
     Q = q_from_cayley(dcm)
     return jnp.ndarray([-Q[1, 2], Q[0, 2], -Q[0, 1]])
+
+# @jit
+# def extended_cayley_transform(X: jnp.ndarray) -> jnp.ndarray:
+#     """ Cayley transformation for matrix X.  X must be either skew-symmetric
+#         or it is orthogonal. 
+
+#     Args:
+#         X (jnp.jndarray): Skew-symmetric or orthogonal matrix. 
+
+#     Returns:
+#         jnp.ndarray: Corresponding orthogonal or or skew-symmetric matrix. 
+#     """

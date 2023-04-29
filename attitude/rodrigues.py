@@ -125,3 +125,4 @@ class MRP(Primitive):
             MRP: new instance inverse MRP. 
         """
         return self.__class__(-self.s)
+    
