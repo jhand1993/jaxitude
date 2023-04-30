@@ -86,11 +86,12 @@ class PRVUtil(object):
         """
         phi = PRVUtil.get_phi(dcm)
         sinphi = jnp.sin(phi)
-        return jnp.array(
+        e_raw = jnp.array(
             [[dcm[1, 2] - dcm[2, 1]],
             [dcm[2, 0] - dcm[0, 2]],
             [dcm[0, 1] - dcm[1, 0]]]
         ) * 0.5 / sinphi
+        return e_raw / jnp.linalg.norm(e_raw)
 
     @staticmethod
     def get_phi(dcm: jnp.ndarray) -> float:

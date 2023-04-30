@@ -4,6 +4,7 @@ from attitude.eulerangles import EulerAngle
 from attitude.quaternions import Quaternion
 from attitude.rodrigues import CRP, MRP
 from attitude.operations.composition import compose_quat, relative_crp, compose_mrp
+from attitude.determination.triad import get_triad_dcm
 import jax.numpy as jnp
 
 class TestPrimitives(unittest.TestCase):
@@ -242,3 +243,26 @@ class TestCompositions(unittest.TestCase):
                 test_s[i], target_s[i],
                 msg='Error in direct MRP s composition.'
             )
+
+
+class TestTriad(unittest.TestCase):
+    """ Test triad functionality. 
+    """
+    def test_get_dcm(self):
+        v1_b = jnp.array([0.8273, 0.5541, -0.0920])
+        v2_b = jnp.array([-0.8285, 0.5522,- 0.0955])
+
+        v1_n = jnp.array([-0.1517, -0.9669, 0.2050])
+        v2_n = jnp.array([-0.8393, 0.4494, -0.3044])
+        test_dcm = get_triad_dcm(v1_b, v2_b, v1_n, v2_n).dcm
+        target_dcm = jnp.array(
+            [[ 0.4155587, -0.85509086, 0.3100492],
+            [-0.83393234, -0.49427602, -0.24545473],
+            [0.36313602, -0.15655923, -0.9184887]]
+        )
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(
+                    test_dcm[i], target_dcm[i],
+                    msg='Error in Triad DCM calculation.'
+                )
