@@ -16,8 +16,8 @@ class TestPrimitives(unittest.TestCase):
         test = R1(jnp.pi / 2.)
         target = jnp.array(
             [[1., 0., 0.],
-             [0., 0., -1.],
-             [0., 1., 0.]]
+             [0., 0., 1.],
+             [0., -1., 0.]]
         )
         for i in range(target.shape[0]):
             for j in range(target.shape[1]):
@@ -31,9 +31,9 @@ class TestPrimitives(unittest.TestCase):
         """
         test = R2(jnp.pi / 2.)
         target = jnp.array(
-            [[0., 0., 1.],
+            [[0., 0., -1.],
              [0., 1., 0.],
-             [-1., 0., 0.]]
+             [1., 0., 0.]]
         )
         for i in range(target.shape[0]):
             for j in range(target.shape[1]):
@@ -47,8 +47,8 @@ class TestPrimitives(unittest.TestCase):
         """
         test = R3(jnp.pi / 2.)
         target = jnp.array(
-            [[0., -1., 0.],
-             [1., 0., 0.],
+            [[0., 1., 0.],
+             [-1., 0., 0.],
              [0., 0., 1.]]
         )
         for i in range(target.shape[0]):
@@ -72,7 +72,7 @@ class TestEuler(unittest.TestCase):
     """ Test for Euler angle functionality.
     """
     def test_euler_conversion(self):
-        test_angles = (0.3490658700466156, 0.1745329350233078, -0.1745329350233078)
+        test_angles = jnp.array([0.3490658700466156, -0.1745329350233078, 2.094395160675049])
         test = EulerAngle(test_angles)
         test_out = test.get_eulerangles('313')
         target_out = (2.7129145, 0.24619713, -2.3485403)
@@ -87,14 +87,12 @@ class TestPRV(unittest.TestCase):
     """ Test for PRV functionality. 
     """
     def test_PRV_from_euler(self):
-        test_angles = (0.3490658700466156, -0.1745329350233078, 2.094395160675049)
+        test_angles = jnp.array([0.3490658700466156, -0.1745329350233078, 2.094395160675049])
         test = EulerAngle(test_angles)
         test_theta, test_e = test.get_eulerangles('313')
         target_theta = 2.146152973175049
         target_e = jnp.array(
-            [[-0.97555053],
-            [-0.12165573],
-            [-0.18303284]]
+            [-0.97555053, -0.12165573, -0.18303284]
         )
         self.assertAlmostEqual(
             test_theta, target_theta,
@@ -102,7 +100,7 @@ class TestPRV(unittest.TestCase):
         )
         for i in range(3):
             self.assertAlmostEqual(
-                test_e.flatten()[i], target_e.flatt()[i],
+                test_e.flatten()[i], target_e.flatten()[i],
                 msg='Error in PRV calcuation from dcm.'
             )
 

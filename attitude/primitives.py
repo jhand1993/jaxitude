@@ -10,54 +10,54 @@ import jax.numpy as jnp
 # This maps Euler type to angles, given a rotation matrix R.
 eulerangle_map = {
     '131': lambda R: (
-        jnp.arctan2(R[2, 0], R[2, 1]),
+        jnp.arctan2(R[0, 2], R[1, 2]),
         jnp.arccos(R[0, 0]),
-        jnp.arctan2(R[0, 2], -R[1, 2])
+        jnp.arctan2(R[2, 0], -R[2, 1])
     ),
     '121': lambda R: (
-        jnp.arctan2(R[1, 0], -R[2, 0]),
+        jnp.arctan2(R[0, 1], -R[0, 2]),
         jnp.arccos(R[0, 0]),
-        jnp.arctan2(R[0, 1], R[0, 2])       
+        jnp.arctan2(R[1, 0], R[2, 0])       
     ),
     '212': lambda R: (
-        jnp.arctan2(R[0, 1], R[2, 1]),
+        jnp.arctan2(R[1, 2], R[1, 2]),
         jnp.arccos(R[1, 1]),
-        jnp.arctan2(R[1, 0], -R[1, 2])
+        jnp.arctan2(R[0, 1], -R[2, 1])
     ),
     '232': lambda R: (
-        jnp.arctan2(R[2, 1], -R[0, 1]),
+        jnp.arctan2(R[1, 2], -R[1, 0]),
         jnp.arccos(R[1, 1]),
-        jnp.arctan2(R[1, 2], R[1, 0])
+        jnp.arctan2(R[2, 1], R[0, 1])
     ),
     '323': lambda R: (
-        jnp.arctan2(R[1, 2], R[0, 2]),
+        jnp.arctan2(R[2, 1], R[2, 0]),
         jnp.arctan2(jnp.sqrt(1. - R[2, 2]**2), R[2, 2]),
-        jnp.arctan2(R[2, 1], -R[2, 0])
+        jnp.arctan2(R[1, 2], -R[0, 2])
     ),
     '313': lambda R: (
-        jnp.arctan2(R[0, 2], -R[1, 2]),
+        jnp.arctan2(R[2, 0], -R[2, 1]),
         jnp.arccos(R[2, 2]),
-        jnp.arctan2(R[2, 0], R[2, 1])
+        jnp.arctan2(R[0, 2], R[1, 2])
     ),
     '132': lambda R: (
-        jnp.arctan2(R[2, 1], R[1, 1]),
-        jnp.arcsin(-R[0, 1]),
-        jnp.arctan2(R[0, 2], R[0, 0])
+        jnp.arctan2(R[1, 2], R[1, 1]),
+        jnp.arcsin(-R[1, 0]),
+        jnp.arctan2(R[2, 0], R[0, 0])
     ),
     '123': lambda R: (
-        jnp.arctan2(-R[1, 2], R[2, 2]),
-        jnp.arcsin(R[0, 2]),
-        jnp.arctan2(R[0, 1], R[0, 0])
+        jnp.arctan2(-R[2, 1], R[2, 2]),
+        jnp.arcsin(R[2, 0]),
+        jnp.arctan2(R[1, 0], R[0, 0])
     ),
     '213': lambda R: (
-        jnp.arctan2(R[0, 2], R[2, 2]),
-        jnp.arcsin(-R[1, 2]),
-        jnp.arctan2(R[1, 0], R[1, 1])
+        jnp.arctan2(R[2, 0], R[2, 2]),
+        jnp.arcsin(-R[2, 1]),
+        jnp.arctan2(R[0, 1], R[1, 1])
     ),
     '231': lambda R: (
-        jnp.arctan2(-R[0, 2], R[0, 0]),
-        jnp.arcsin(R[1, 0]),
-        jnp.arctan2(-R[1, 2], R[1, 1])
+        jnp.arctan2(-R[2, 0], R[0, 0]),
+        jnp.arcsin(R[0, 1]),
+        jnp.arctan2(-R[2, 1], R[1, 1])
     ),
     '321': lambda R: (
         jnp.arctan2(R[1, 0], R[0, 0]),
@@ -65,11 +65,36 @@ eulerangle_map = {
         jnp.arctan2(R[2, 1], R[2, 2])
     ),
     '312': lambda R: (
-        jnp.arctan2(-R[0, 1], R[1, 1]),
-        jnp.arcsin(R[2, 1]),
-        jnp.arctan2(-R[2, 0], R[2, 2])
+        jnp.arctan2(-R[1, 0], R[1, 1]),
+        jnp.arcsin(R[1, 2]),
+        jnp.arctan2(-R[0, 2], R[2, 2])
     )
 }
+
+class MiscUtil(object):
+    """ Container class for miscellaneous caluclations.
+    """
+    @staticmethod
+    def antisym_dcm_vector(dcm: jnp.ndarray) -> jnp.ndarray:
+        """ Returns [
+                dcm[1, 2] - dcm[2, 1], 
+                dcm[2, 0] - dcm[0, 2],
+                dcm[0, 1] - dcm[1, 0]
+            ], a vector that is used in extracting PRV, CRP q, and
+            MRP s.
+
+        Args:
+            dcm (jnp.ndarray): 3x3 dcm matrix.
+
+        Returns:
+            jnp.ndarray: 1x3 matrix
+        """
+        return jnp.array(
+                    [dcm[1, 2] - dcm[2, 1],
+                    dcm[2, 0] - dcm[0, 2],
+                    dcm[0, 1] - dcm[1, 0]]
+            )
+
 
 class PRVUtil(object):
     """ Container class for PRV calculations from dcm. 
@@ -82,15 +107,11 @@ class PRVUtil(object):
             dcm (jnp.ndarray): dcm 3x3 matrix
 
         Returns:
-            jnp.ndarray: 3x1 array representation of e
+            jnp.ndarray: 1x3 array representation of e
         """
         phi = PRVUtil.get_phi(dcm)
         sinphi = jnp.sin(phi)
-        e_raw = jnp.array(
-            [[dcm[1, 2] - dcm[2, 1]],
-            [dcm[2, 0] - dcm[0, 2]],
-            [dcm[0, 1] - dcm[1, 0]]]
-        ) * 0.5 / sinphi
+        e_raw = MiscUtil.antisym_dcm_vector(dcm) * 0.5 / sinphi
         return e_raw / jnp.linalg.norm(e_raw)
 
     @staticmethod
@@ -138,7 +159,7 @@ class Primitive(object):
         Returns:
             tuple: phi, vec(e)
         """
-        return float(PRVUtil.get_phi(self.dcm)), PRVUtil.get_e(self.dcm)
+        return PRVUtil.get_phi(self.dcm), PRVUtil.get_e(self.dcm)
 
     def get_prv2(self) -> tuple:
         """ Returns principle angle phi and principle vector e from rotation matrix for 
@@ -147,7 +168,7 @@ class Primitive(object):
         Returns:
             tuple: phi, vec(e)
         """
-        return float(PRVUtil.get_phi(self.dcm)) - 2. * jnp.pi, PRVUtil.get_e(self.dcm)
+        return PRVUtil.get_phi(self.dcm) - 2. * jnp.pi, PRVUtil.get_e(self.dcm)
 
     def get_eulerangles(self, ea_type: str) -> jnp.ndarray:
         """ Returns a tuple of euler angles for given order from dcm.  
@@ -229,11 +250,7 @@ class Primitive(object):
             jnp.ndarray: 1x3 matrix of CRP q parameters. 
         """
         zeta_squared = jnp.trace(self.dcm) + 1.
-        return jnp.array(
-            [self.dcm[1, 2] - self.dcm[2, 1], 
-             self.dcm[2, 0] - self.dcm[0, 2], 
-             self.dcm[0, 1] - self.dcm[1, 0]]
-        ) / zeta_squared
+        return MiscUtil.antisym_dcm_vector(self.dcm) / zeta_squared
 
     def get_s(self) -> jnp.ndarray:
         """ Gets MRP s parameters from DCM. 
@@ -242,11 +259,7 @@ class Primitive(object):
             jnp.ndarray: 1x3 matrix of MRP s parameters. 
         """
         zeta = jnp.sqrt(jnp.trace(self.dcm) + 1.)
-        return jnp.array(
-            [self.dcm[1, 2] - self.dcm[2, 1], 
-             self.dcm[2, 0] - self.dcm[0, 2], 
-             self.dcm[0, 1] - self.dcm[1, 0]]
-        ) / zeta / (zeta + 2.)
+        return MiscUtil.antisym_dcm_vector(self.dcm) / zeta / (zeta + 2.)
 
 class BaseR(Primitive):
     """ Fundamental coordinate axis rotation primitive subclass.  
@@ -269,7 +282,7 @@ class BaseR(Primitive):
         return self.__class__(-self.angle)
 
 class R1(BaseR):
-    """ Fundamental rotation w.r.t. coordinate axis 1.
+    """ Fundamental passive rotation w.r.t. coordinate axis 1.
 
     Args:
         BaseR: Base class
@@ -284,12 +297,12 @@ class R1(BaseR):
         super().__init__(angle)
         self.dcm = jnp.array(
             [[1., 0., 0.],
-             [0., jnp.cos(angle), -jnp.sin(angle)],
-             [0., jnp.sin(angle), jnp.cos(angle)]]
+             [0., jnp.cos(angle), jnp.sin(angle)],
+             [0., -jnp.sin(angle), jnp.cos(angle)]]
         )
 
 class R2(BaseR):
-    """ Fundamental rotation w.r.t. coordinate axis 2.
+    """ Fundamental passive rotation w.r.t. coordinate axis 2.
 
     Args:
         BaseR: Base class
@@ -303,14 +316,14 @@ class R2(BaseR):
         """
         super().__init__(angle)
         self.dcm = jnp.array(
-            [[jnp.cos(angle), 0., jnp.sin(angle)],
+            [[jnp.cos(angle), 0., -jnp.sin(angle)],
              [0., 1., 0.],
-             [-jnp.sin(angle), 0., jnp.cos(angle)]]
+             [jnp.sin(angle), 0., jnp.cos(angle)]]
         )
 
 
 class R3(BaseR):
-    """ Fundamental rotation w.r.t. coordinate axis 3.
+    """ Fundamental passive rotation w.r.t. coordinate axis 3.
 
     Args:
         BaseR: Base class
@@ -324,8 +337,8 @@ class R3(BaseR):
         """
         super().__init__(angle)
         self.dcm = jnp.array(
-            [[jnp.cos(angle), -jnp.sin(angle), 0.],
-             [jnp.sin(angle), jnp.cos(angle), 0.],
+            [[jnp.cos(angle), jnp.sin(angle), 0.],
+             [-jnp.sin(angle), jnp.cos(angle), 0.],
              [0., 0., 1.]]
         )
 

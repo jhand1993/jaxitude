@@ -21,7 +21,7 @@ class EulerAngle(Primitive):
         self.order = self._order_decipher(order)
         f_alpha, f_beta, f_gamma = self._order_rotations(order)
         self.R_alpha, self.R_beta, self.R_gamma = f_alpha(angles[0]), f_beta(angles[1]), f_gamma(angles[2])
-        self.dcm = self.R_alpha() @ self.R_beta() @ self.R_gamma()
+        self.dcm = jnp.matmul(self.R_gamma(), jnp.matmul(self.R_beta(), self.R_alpha()))
     
     def _order_decipher(self, order) -> str:
         """ Function to map input string to proper string format.
