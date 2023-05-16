@@ -5,6 +5,8 @@ from attitude.quaternions import Quaternion
 from attitude.rodrigues import CRP, MRP
 from attitude.operations.composition import compose_quat, relative_crp, compose_mrp
 from attitude.determination.triad import get_triad_dcm
+from attitude.determination.davenport import get_K
+from attitude.determination.quest import get_q
 import jax.numpy as jnp
 
 class TestPrimitives(unittest.TestCase):
@@ -264,3 +266,53 @@ class TestTriad(unittest.TestCase):
                     test_dcm[i], target_dcm[i],
                     msg='Error in Triad DCM calculation.'
                 )
+
+
+class TestDavenport(unittest.TestCase):
+    """ Test Davenport's q method functionality.
+    """
+    def test_get_K(self):
+        vb = jnp.array(
+            [[ 0.8273,  0.5541, -0.092 ],
+             [-0.8285,  0.5522, -0.0955]]
+        )
+        vn = jnp.array(
+            [[-0.1517, -0.9669,  0.205 ],
+             [-0.8393,  0.4494, -0.3044]]
+        )
+        w = jnp.array([1., 0.5])
+        test_K = get_K(w, vb, vn)
+        target_K = jnp.array(
+            [[-0.19382623, -0.0379503 , -0.24166122, -0.6702926 ],
+             [-0.0379503 ,  0.6381834 , -1.3018681 ,  0.34972718],
+             [-0.24166122, -1.3018681 , -0.62953365,  0.0970416 ],
+             [-0.6702926 ,  0.34972718,  0.0970416 ,  0.18517643]]
+        )
+        for i in range(4):
+            for j in range(4):
+                self.assertAlmostEqual(
+                    test_K[i, j], target_K[i, j], 
+                    msg='Error in Davenport get_K calculation.'
+                )
+                    
+
+class TestQuest(unittest.TestCase):
+    """ Test QUEST functionality
+    """
+    def test_get_q(self):
+        vb = jnp.array(
+            [[ 0.8273,  0.5541, -0.092 ],
+             [-0.8285,  0.5522, -0.0955]]
+        )
+        vn = jnp.array(
+            [[-0.1517, -0.9669,  0.205 ],
+             [-0.8393,  0.4494, -0.3044]]
+        )
+        w = jnp.array([1., 0.5])
+        test_q = get_q(w, vb, vn)
+        target_q = jnp.array([-31.83776, 19.00673, -7.576603])
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_q[i], target_q[i],
+                msg='error in QUEST get_q calculation.'
+            )

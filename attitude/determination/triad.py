@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax import jit
 from attitude.primitives import DCM
 
-@jit
+
 def get_triad_frame(s: jnp.ndarray, m: jnp.ndarray) -> jnp.ndarray:
     """ Calculates the triad frame from vectors s and m. 
         t1 = s, t2 = s x m / |s x m|, t3 = t1 x t2. 
@@ -24,7 +24,7 @@ def get_triad_frame(s: jnp.ndarray, m: jnp.ndarray) -> jnp.ndarray:
     t3 = t3_raw / jnp.linalg.norm(t3_raw)
     return jnp.vstack([t1, t2, t3]).T
 
-@jit
+
 def get_triad_r(
         s_b: jnp.ndarray, m_b: jnp.ndarray,
         s_n: jnp.ndarray, m_n: jnp.ndarray
@@ -45,21 +45,3 @@ def get_triad_r(
     NT = get_triad_frame(s_n, m_n)
     return jnp.matmul(BT, NT.T)
 
-def get_triad_dcm(
-        s_b: jnp.ndarray, m_b: jnp.ndarray,
-        s_n: jnp.ndarray, m_n: jnp.ndarray
-    ) -> DCM:
-    """ Returns DCM object of calculated body to inertial frame DCM from heading 
-        vectors given in body (b) and inertial (n) frames. Wraps jitted 
-        'get_triad_r' to avoid primitive issues with DCM class.
-
-    Args:
-        s_b (jnp.ndarray): 1x3 matrix first heading measurement in b frame.
-        m_b (jnp.ndarray): 1x3 matrix second heading measurement in b frame.
-        s_n (jnp.ndarray): 1x3 matrix first heading measurement in n frame.
-        m_n (jnp.ndarray): 1x3 matrix second heading measurement in n frame.
-
-    Returns:
-        DCM: DCM object of body to inertial frame transformation. 
-    """
-    return DCM(get_triad_r(s_b, m_b, s_n, m_n))

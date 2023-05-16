@@ -95,6 +95,22 @@ class MiscUtil(object):
                     dcm[0, 1] - dcm[1, 0]]
             )
 
+    @staticmethod
+    def cross_prod_oper(v: jnp.ndarray) -> jnp.ndarray:
+        """ Matrix representation of cross product operator of vector v.
+
+        Args:
+            v (jnp.ndarray): 1x3 matrix (or broadcastable) representation of 3D vector v.
+
+        Returns:
+            jnp.ndarray: 3x3 matrix of cross product operation. 
+        """
+        v_f = v.flatten()
+        return jnp.array(
+            [[0., -v_f[2], v_f[1]],
+             [v_f[2], 0., -v_f[0]],
+             [-v_f[1], v_f[0], 0.]]
+        )
 
 class PRVUtil(object):
     """ Container class for PRV calculations from dcm. 
