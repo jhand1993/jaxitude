@@ -1,6 +1,6 @@
 """ 
 All attitudes will be represented by products of primitive rotations R, 
-where R is a rotation along some coordinate axis.  Here R1 will be a rotation 
+where R is a rotation along some coordinate axis.  Here R1, will be a rotation 
 along the first coordinate component, R2 the second component, and R3 the third. 
 For example, a 3-2-1 (Z-X-Y) Euler angle rotation sequence by angles (a, b, c)
 will be M(a,b,c) = R1(c)R2(b)R3(c).
@@ -96,7 +96,7 @@ class MiscUtil(object):
             )
 
     @staticmethod
-    def cross_prod_oper(v: jnp.ndarray) -> jnp.ndarray:
+    def cpo(v: jnp.ndarray) -> jnp.ndarray:
         """ Matrix representation of cross product operator of vector v.
 
         Args:
@@ -126,8 +126,7 @@ class PRVUtil(object):
             jnp.ndarray: 1x3 array representation of e
         """
         phi = PRVUtil.get_phi(dcm)
-        sinphi = jnp.sin(phi)
-        e_raw = MiscUtil.antisym_dcm_vector(dcm) * 0.5 / sinphi
+        e_raw = MiscUtil.antisym_dcm_vector(dcm) * 0.5 / jnp.sin(phi)
         return e_raw / jnp.linalg.norm(e_raw)
 
     @staticmethod
@@ -146,7 +145,7 @@ class PRVUtil(object):
 class Primitive(object):
     """ Object with __call__ returning self.dcm. Base class for all 
         rotations and includes transformation equations from dcm. 
-        Base dcm attribute is a null rotation (identity matrix). 
+        Base dcm attribute is a zero rotation (identity matrix). 
     """
     def __init__(self) -> None:
         # Set to identity for primitives.  Does change state in subclass overrides,
@@ -162,7 +161,7 @@ class Primitive(object):
         return self.dcm
     
     def get_eig(self) -> tuple:
-        """ Wrapper to call JAX.numpy.linalg.eig.
+        """ Wrapper to call JAX.numpy.linalg.eig().
 
         Returns:
             tuple: array of eigenvalues and array of eigenvectors.
@@ -198,8 +197,8 @@ class Primitive(object):
         return jnp.asarray(eulerangle_map[ea_type](self.dcm))
     
     def _get_b_base(self) -> jnp.ndarray:
-        """ Returns a matrix of quaternion parameters from dcm. Uses Shepard's method 
-            to avoid singularity at b0=0.  Doesn't decide shortest path. 
+        """ Returns a matrix of quaternion parameters from dcm. Uses Shepard's
+            method to avoid singularity at b0=0.  Doesn't decide shortest path. 
 
         Returns:
             jnp.ndarray: 1x4 matrix of quaternion parameters. 
@@ -304,8 +303,7 @@ class R1(BaseR):
         BaseR: Base class
     """
     def __init__(self, angle: float) -> None:
-        """_summary_
-
+        """
         Attibutes:
             rotor (jnp.ndarray): Overwrites primitive definition
                 appropriate for R1 rotation. 
@@ -324,8 +322,7 @@ class R2(BaseR):
         BaseR: Base class
     """
     def __init__(self, angle: float) -> None:
-        """_summary_
-
+        """
         Attibutes:
             rotor (jnp.ndarray): Overwrites primitive definition
                 appropriate for R2 rotation. 
@@ -345,8 +342,7 @@ class R3(BaseR):
         BaseR: Base class
     """
     def __init__(self, angle: float) -> None:
-        """_summary_
-
+        """
         Attibutes:
             rotor (jnp.ndarray): Overwrites primitive definition
                 appropriate for R3 rotation. 

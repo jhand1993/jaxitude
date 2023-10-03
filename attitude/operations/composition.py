@@ -1,7 +1,6 @@
 import jax.numpy as jnp
-from jax import jit
 
-@jit
+
 def compose_quat(b_p: jnp.ndarray, b_pp: jnp.ndarray) -> jnp.ndarray:
     """ Adds Euler parameters directly via matrix multiplication:
         Q(b) = Q(b_pp)Q(b_p) for quaternion rotation matrix Q. 
@@ -21,7 +20,7 @@ def compose_quat(b_p: jnp.ndarray, b_pp: jnp.ndarray) -> jnp.ndarray:
     )
     return jnp.matmul(matrix, b_p.reshape((4, 1))).flatten()
 
-@jit
+
 def compose_crp(q_p: jnp.ndarray, q_pp: jnp.ndarray) -> jnp.ndarray:
     """ Compose CRP parameters directly in the following order:
         R(q) = R(q_pp)R(q_p) for CRP rotation matrix R. 
@@ -37,6 +36,7 @@ def compose_crp(q_p: jnp.ndarray, q_pp: jnp.ndarray) -> jnp.ndarray:
     denom = 1. - jnp.dot(q_p, q_pp)
     return num / denom
 
+
 def relative_crp(q: jnp.ndarray, q_p: jnp.ndarray) -> jnp.ndarray:
     """ Compose CRP parameters directly in the following order:
         R(q_pp) = R(q_p)R(q)^-1 for CRP rotation matrix R. 
@@ -49,7 +49,7 @@ def relative_crp(q: jnp.ndarray, q_p: jnp.ndarray) -> jnp.ndarray:
     """
     return compose_crp(-q_p, q)
 
-# @jit
+
 def compose_mrp(s_p: jnp.ndarray, s_pp: jnp.ndarray, tol=1e-2) -> jnp.ndarray:
     """ Compose MRP parameters direclty in the following order:
         R(s) = R(s_pp)R(s_p) for MRP rotation matrix R. If the denominator 
@@ -66,23 +66,9 @@ def compose_mrp(s_p: jnp.ndarray, s_pp: jnp.ndarray, tol=1e-2) -> jnp.ndarray:
     """
     dot_p = jnp.dot(s_p, s_p)
     dot_pp = jnp.dot(s_pp, s_pp)
-    test_denom = 1. + dot_p * dot_pp - 2. * jnp.dot(s_p, s_pp)
-    # Nested where functions allow for this to be jitified. 
-    # First check is if the test_denom is less than the tolerance. If so, 
-    # then the second check gets shadow set of s_p if |s_p|>|s_pp|.  
-    # Otherwise, the shadow set of s_pp is used. 
-    return jnp.where(
-        test_denom < tol,
-        ((1. - dot_pp) * s_p + (1. - dot_p) * s_pp - 2. * jnp.cross(s_pp, s_p)) /\
-              (1. + dot_p * dot_pp - 2. * jnp.dot(s_p, s_pp)),
-        jnp.where(
-            dot_p > dot_pp,
-            ((1. - dot_pp) * shadow_s(s_p) + (1. - 1. / dot_p) * s_pp - 2. * jnp.cross(s_pp, shadow_s(s_p))) /\
-                  (1. + dot_pp / dot_p - 2. * jnp.dot(shadow_s(s_p), s_pp)), 
-            ((1. - 1. / dot_pp) * s_p + (1. - dot_p) * shadow_s(s_pp) - 2. * jnp.cross(shadow_s(s_pp), s_p)) /\
-                  (1. + dot_p / dot_pp - 2. * jnp.dot(s_p, shadow_s(s_pp))), 
-        )
-    )
+    return ((1. - dot_pp) * s_p + (1. - dot_p) * s_pp - 2. * jnp.cross(s_pp, s_p)) /\
+              (1. + dot_p * dot_pp - 2. * jnp.dot(s_p, s_pp))
+
 
 def relative_mrp(s: jnp.ndarray, s_p: jnp.ndarray, tol=1e-2) -> jnp.ndarray:
     """ Compose MRP parameters directly in the following order:
@@ -98,7 +84,7 @@ def relative_mrp(s: jnp.ndarray, s_p: jnp.ndarray, tol=1e-2) -> jnp.ndarray:
     """
     return compose_mrp(-s_p, s, tol=tol)
 
-@jit
+
 def shadow_s(s: jnp.ndarray) -> jnp.ndarray:
     """ Return shadow set of s. 
 

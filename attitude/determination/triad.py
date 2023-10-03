@@ -26,9 +26,11 @@ def get_triad_frame(s: jnp.ndarray, m: jnp.ndarray) -> jnp.ndarray:
 
 
 def get_triad_r(
-        s_b: jnp.ndarray, m_b: jnp.ndarray,
-        s_n: jnp.ndarray, m_n: jnp.ndarray
-    ) -> jnp.ndarray:
+    s_b: jnp.ndarray,
+    m_b: jnp.ndarray,
+    s_n: jnp.ndarray,
+    m_n: jnp.ndarray
+) -> jnp.ndarray:
     """ Calculates body to inertial frame DCM from heading vectors given in
         body (b) and inertial (n) frames. 
 

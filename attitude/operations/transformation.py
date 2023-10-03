@@ -1,9 +1,8 @@
 """ Some useful attitude transformations.  
 """
 import jax.numpy as jnp
-from jax import jit
 
-@jit
+
 def cayley_transform(X: jnp.ndarray) -> jnp.ndarray:
     """ Cayley transformation for matrix X.  X must be either skew-symmetric
         or it is orthogonal. 
@@ -19,7 +18,7 @@ def cayley_transform(X: jnp.ndarray) -> jnp.ndarray:
 
     return jnp.matmul(I - X, jnp.linalg.inv(I + X))
 
-@jit
+
 def q_from_cayley(dcm: jnp.ndarray) -> jnp.ndarray:
     """ Converts a rotation matrix (dcm attribute) to q via Cayley's transformation.
 

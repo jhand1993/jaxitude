@@ -20,14 +20,18 @@ def K_eig_eq(x: float, K: jnp.ndarray) -> float:
     return jnp.linalg.det(K - x * jnp.eye(K.shape[0]))
 
 
-def get_lam(w: jnp.ndarray, K: jnp.ndarray, e: float=1e-15) -> float:
+def get_lam(
+    w: jnp.ndarray,
+    K: jnp.ndarray,
+    e: float=1e-15
+) -> float:
     """ Use simple Newton-Raphson method to iterate for lam with initial guess 
         equal to the sum of the weights w. Function should be jitable. 
 
     Args:
         w (jnp.ndarray): N matrix with weights.
         K (jnp.ndarray): K matrix from Davenport's method
-        e (float, optional): Desired precision. Defaults to 1e-16.
+        e (float, optional): Desired precision. Defaults to 1e-15.
 
     Returns:
         float: Largest eigenvalue of K.
@@ -39,9 +43,12 @@ def get_lam(w: jnp.ndarray, K: jnp.ndarray, e: float=1e-15) -> float:
     return while_loop(cond_func, body_func, lam0)[0]
 
 
-def get_q(
-        w: jnp.ndarray,  v_b_set: jnp.ndarray, v_n_set: jnp.ndarray, e: float=1e-15
-    ) -> jnp.ndarray:
+def get_CRPq(
+    w: jnp.ndarray,
+    v_b_set: jnp.ndarray,
+    v_n_set: jnp.ndarray,
+    e: float=1e-15
+) -> jnp.ndarray:
     """ Get CRP q parameters from sensor heading and weights. 
 
     Args:
@@ -62,9 +69,12 @@ def get_q(
     return jnp.matmul(jnp.linalg.inv((lam + sigma) * jnp.eye(3) - S), Z).flatten()
 
 
-def get_b(
-        w: jnp.ndarray,  v_b_set: jnp.ndarray, v_n_set: jnp.ndarray, e: float=1e-15
-    ) -> jnp.ndarray:
+def get_Quatb(
+    w: jnp.ndarray,
+    v_b_set: jnp.ndarray,
+    v_n_set: jnp.ndarray,
+    e: float=1e-15
+) -> jnp.ndarray:
     """ Get Euler parameters b from sensor heading and weights. 
 
     Args:
@@ -76,6 +86,6 @@ def get_b(
     Returns:
         jnp.ndarray: 1x4 b parameter matrix.
     """
-    q = get_q(w, v_b_set, v_n_set, e=e)
+    q = get_CRPq(w, v_b_set, v_n_set, e=e)
     q2 = jnp.dot(q, q)
     return jnp.array(1., q[0], q[1], q[2]) / jnp.sqrt(1. + q2)

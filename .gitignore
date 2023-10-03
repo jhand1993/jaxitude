@@ -118,4 +118,4 @@ dmypy.json
 
 # custom test notebooks
 test*.ipynb
-
+filters.ipynb

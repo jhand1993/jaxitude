@@ -17,7 +17,8 @@ class Quaternion(Primitive):
                 is the scalar component
         """
         super().__init__()
-        assert jnp.abs(jnp.linalg.norm(jnp.asarray(b)) - 1.) < 1e-7, 'Elements of b must have unit length.'
+        assert jnp.abs(jnp.linalg.norm(jnp.asarray(b)) - 1.) < 1e-7,\
+            'Elements of b must have unit length.'
         self.b = b
         self.dcm = self._build_quanterion(b)
 

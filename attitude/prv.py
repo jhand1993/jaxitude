@@ -7,7 +7,7 @@ import jax.numpy as jnp
 class PRV(Primitive):
     """ Principle rotation vector object.
     """
-    def __init__(self, phi, e) -> None:
+    def __init__(self, phi: float, e: jnp.ndarray) -> None:
         """
         Attributes:
             phi (float): principle rotation in radians.
@@ -19,7 +19,7 @@ class PRV(Primitive):
         self.e = e
         self.dcm = self._build_prv(phi, e)
 
-    def _build_prv(self, phi, e):
+    def _build_prv(self, phi: float, e: jnp.ndarray):
         """ Takes input phi scalar and e vector to build PRV rotation matrix.
 
         Args:

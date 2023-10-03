@@ -17,13 +17,18 @@ class EulerAngle(Primitive):
             self.R_gamma (PrimitiveR): Rotation object for third rotation. 
             self.dcm (jnp.ndarray): Euler angle DCM.
         """
+        # Define attributes.
         self.alpha, self.beta, self.gamma = angles.tolist()
         self.order = self._order_decipher(order)
         f_alpha, f_beta, f_gamma = self._order_rotations(order)
-        self.R_alpha, self.R_beta, self.R_gamma = f_alpha(angles[0]), f_beta(angles[1]), f_gamma(angles[2])
-        self.dcm = jnp.matmul(self.R_gamma(), jnp.matmul(self.R_beta(), self.R_alpha()))
+        self.R_alpha = f_alpha(angles[0])
+        self.R_beta = f_beta(angles[1])
+        self.R_gamma = f_gamma(angles[2])
+        self.dcm = jnp.matmul(
+            self.R_gamma(), jnp.matmul(self.R_beta(), self.R_alpha())
+        )
     
-    def _order_decipher(self, order) -> str:
+    def _order_decipher(self, order: str) -> str:
         """ Function to map input string to proper string format.
 
         Args:
@@ -44,7 +49,7 @@ class EulerAngle(Primitive):
         }
         return ''.join([mapper[i] for i in order.lower()])
 
-    def _order_rotations(self, order) -> tuple:
+    def _order_rotations(self, order: str) -> tuple:
         """ Function to map input string to rotation order. 
 
         Args:

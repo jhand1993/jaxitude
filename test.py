@@ -4,9 +4,9 @@ from attitude.eulerangles import EulerAngle
 from attitude.quaternions import Quaternion
 from attitude.rodrigues import CRP, MRP
 from attitude.operations.composition import compose_quat, relative_crp, compose_mrp
-from attitude.determination.triad import get_triad_dcm
+from attitude.determination.triad import get_triad_r
 from attitude.determination.davenport import get_K
-from attitude.determination.quest import get_q
+from attitude.determination.quest import get_CRPq
 import jax.numpy as jnp
 
 class TestPrimitives(unittest.TestCase):
@@ -254,7 +254,7 @@ class TestTriad(unittest.TestCase):
 
         v1_n = jnp.array([-0.1517, -0.9669, 0.2050])
         v2_n = jnp.array([-0.8393, 0.4494, -0.3044])
-        test_dcm = get_triad_dcm(v1_b, v2_b, v1_n, v2_n).dcm
+        test_dcm = get_triad_r(v1_b, v2_b, v1_n, v2_n)
         target_dcm = jnp.array(
             [[ 0.4155587, -0.85509086, 0.3100492],
             [-0.83393234, -0.49427602, -0.24545473],
@@ -263,7 +263,7 @@ class TestTriad(unittest.TestCase):
         for i in range(3):
             for j in range(3):
                 self.assertAlmostEqual(
-                    test_dcm[i], target_dcm[i],
+                    test_dcm[i, j], target_dcm[i, j],
                     msg='Error in Triad DCM calculation.'
                 )
 
@@ -309,7 +309,7 @@ class TestQuest(unittest.TestCase):
              [-0.8393,  0.4494, -0.3044]]
         )
         w = jnp.array([1., 0.5])
-        test_q = get_q(w, vb, vn)
+        test_q = get_CRPq(w, vb, vn)
         target_q = jnp.array([-31.83776, 19.00673, -7.576603])
         for i in range(3):
             self.assertAlmostEqual(
