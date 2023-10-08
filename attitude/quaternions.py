@@ -20,10 +20,10 @@ class Quaternion(Primitive):
         assert jnp.abs(jnp.linalg.norm(jnp.asarray(b)) - 1.) < 1e-7,\
             'Elements of b must have unit length.'
         self.b = b
-        self.dcm = self._build_quanterion(b)
+        self.dcm = self._build_quaternion(b)
 
     
-    def _build_quanterion(self, b: jnp.ndarray) -> jnp.ndarray:
+    def _build_quaternion(self, b: jnp.ndarray) -> jnp.ndarray:
         """ Builds dcm from quaternion parameters. 
 
         Args:
@@ -31,7 +31,7 @@ class Quaternion(Primitive):
                 is the scalar component
 
         Returns:
-            jnp.ndarray: dcm derived from buanternion parameters b. 
+            jnp.ndarray: dcm derived from quanternion parameters b. 
         """
         b0, b1, b2, b3 = b.tolist()
 
@@ -45,7 +45,7 @@ class Quaternion(Primitive):
         """ Generates PVR directly from b.
 
         Returns:
-            tuple: sclar phi and 3x1 matrix e.
+            tuple: scalar phi and 3x1 matrix e.
         """
         theta = 2. * jnp.arccos(self.b[0])
         e = jnp.array(
@@ -59,7 +59,7 @@ class Quaternion(Primitive):
         """ Generates CRP q vector from b.
 
         Returns:
-            jnp.ndarray: 3x1 matrix of CRP q parameters.
+            jnp.ndarray: 1x3 matrix of CRP q parameters.
         """
         return jnp.array(
             [self.b[1] / self.b[0],
@@ -71,7 +71,7 @@ class Quaternion(Primitive):
         """ Generate MRP s vector from b.
 
         Returns:
-            jnp.ndarray: 3x1 matrix of MRP s parameters.
+            jnp.ndarray: 1x3 matrix of MRP s parameters.
         """
         return jnp.array(
             [self.b[1] / (1. + self.b[0]),

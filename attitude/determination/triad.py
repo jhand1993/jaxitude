@@ -1,8 +1,6 @@
 """ Triad attitude estimation technique
 """
 import jax.numpy as jnp
-from jax import jit
-from attitude.primitives import DCM
 
 
 def get_triad_frame(s: jnp.ndarray, m: jnp.ndarray) -> jnp.ndarray:

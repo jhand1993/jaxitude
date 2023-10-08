@@ -1,7 +1,6 @@
 """davenport's q method for quaternion parameters
 """
 import jax.numpy as jnp
-from jax import jit
 from attitude.primitives import MiscUtil
 
 

@@ -1,9 +1,9 @@
 """ QUEST Method implementation
 """
-from jax import jit, grad
+from jax import grad
 from jax.lax import while_loop
 import jax.numpy as jnp
-from attitude.determination.davenport import get_K, get_B
+from attitude.determination.davenport import get_B
 from attitude.primitives import MiscUtil
 
 def K_eig_eq(x: float, K: jnp.ndarray) -> float:

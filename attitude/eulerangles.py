@@ -47,6 +47,7 @@ class EulerAngle(Primitive):
             '2': '2',
             '3': '3'
         }
+
         return ''.join([mapper[i] for i in order.lower()])
 
     def _order_rotations(self, order: str) -> tuple:
@@ -65,4 +66,5 @@ class EulerAngle(Primitive):
             '2': R2,
             '3': R3
         }
+
         return (mapper[i] for i in order_proper)
