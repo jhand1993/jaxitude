@@ -1,4 +1,5 @@
-""" CRP: Classical Rodrigues Parameters. 
+""" CRP: Classical Rodrigues Parameters: q_i = b_i / b_0.
+    MRP: Modified Rodrigues Parameters: s_i = b_i / (1 + b_0).
 """
 import jax.numpy as jnp
 from attitude.primitives import Primitive

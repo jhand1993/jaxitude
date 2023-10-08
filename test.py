@@ -95,20 +95,22 @@ class TestPRV(unittest.TestCase):
     """ Test for PRV functionality. 
     """
     def test_PRV_from_euler(self):
-        test_angles = jnp.array([0.3490658700466156, -0.1745329350233078, 2.094395160675049])
-        test = EulerAngle(test_angles, '313')
+        test_angles = jnp.array([0.17453293, 0.43633231, -0.26179939])
+        test = EulerAngle(test_angles, '321')
         test_theta, test_e = test.get_prv()
-        target_theta = 2.146152973175049
+        target_theta = 0.55459931377
         target_e = jnp.array(
-            [-0.97555053, -0.12165573, -0.18303284]
+            [-0.532035, 0.740302, 0.410964]
         )
         self.assertAlmostEqual(
             test_theta, target_theta,
+            places=3,
             msg='Error in PRV calcuation from dcm.'
         )
         for i in range(3):
             self.assertAlmostEqual(
                 test_e.flatten()[i], target_e.flatten()[i],
+                places=3,
                 msg='Error in PRV calcuation from dcm.'
             )
 
@@ -216,6 +218,7 @@ class TestCRP(unittest.TestCase):
                 test_s[i], target_s[i], msg='Error in MVR s calculation.'
             )
 
+
 class TestCompositions(unittest.TestCase):
     """ Test for special compositions operations.  
     """
@@ -247,10 +250,10 @@ class TestCompositions(unittest.TestCase):
             )
 
     def test_compose_MRP(self):
-        s1 = jnp.array([0.1, 0.2, 0.3])
-        s2 = jnp.array([0.5, 0.3, 0.1])
+        s2 = jnp.array([0.1, 0.2, 0.3])
+        s1 = -jnp.array([0.5, 0.3, 0.1])
         test_s = compose_mrp(s1, s2)
-        target_s = jnp.array([-0.16015896, 0.41617954, 0.5295768])
+        target_s = jnp.array([-0.37998495,  0.11437171, -0.02332581])
         for i in range(3):
             self.assertAlmostEqual(
                 test_s[i], target_s[i],

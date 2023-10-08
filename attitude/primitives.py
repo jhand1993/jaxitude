@@ -153,7 +153,7 @@ class Primitive(object):
         self.dcm = jnp.identity(3)
 
     def __call__(self) -> jnp.ndarray:
-        """ Call returns the rotor attribute. 
+        """ Returns DCM matrix. 
 
         Returns:
             jnp.ndarray: self.dcm
