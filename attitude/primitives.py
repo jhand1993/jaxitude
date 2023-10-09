@@ -10,9 +10,9 @@ import jax.numpy as jnp
 # This maps Euler type to angles, given a rotation matrix R.
 eulerangle_map = {
     '131': lambda R: (
-        jnp.arctan2(R[0, 2], R[1, 2]),
+        jnp.arctan2(R[0, 2], R[0, 1]),
         jnp.arccos(R[0, 0]),
-        jnp.arctan2(R[2, 0], -R[2, 1])
+        jnp.arctan2(R[2, 0], -R[1, 0])
     ),
     '121': lambda R: (
         jnp.arctan2(R[0, 1], -R[0, 2]),
@@ -20,7 +20,7 @@ eulerangle_map = {
         jnp.arctan2(R[1, 0], R[2, 0])       
     ),
     '212': lambda R: (
-        jnp.arctan2(R[1, 2], R[1, 2]),
+        jnp.arctan2(R[1, 0], R[1, 2]),
         jnp.arccos(R[1, 1]),
         jnp.arctan2(R[0, 1], -R[2, 1])
     ),
@@ -40,34 +40,34 @@ eulerangle_map = {
         jnp.arctan2(R[0, 2], R[1, 2])
     ),
     '132': lambda R: (
-        jnp.arctan2(R[1, 2], R[1, 1]),
-        jnp.arcsin(-R[1, 0]),
-        jnp.arctan2(R[2, 0], R[0, 0])
+        jnp.arctan2(R[2, 1], R[1, 1]),
+        jnp.arcsin(-R[0, 1]),
+        jnp.arctan2(R[0, 2], R[0, 0])
     ),
     '123': lambda R: (
-        jnp.arctan2(-R[2, 1], R[2, 2]),
-        jnp.arcsin(R[2, 0]),
-        jnp.arctan2(R[1, 0], R[0, 0])
+        jnp.arctan2(-R[1, 2], R[2, 2]),
+        jnp.arcsin(R[0, 2]),
+        jnp.arctan2(R[0, 1], R[0, 0])
     ),
     '213': lambda R: (
-        jnp.arctan2(R[2, 0], R[2, 2]),
-        jnp.arcsin(-R[2, 1]),
-        jnp.arctan2(R[0, 1], R[1, 1])
+        jnp.arctan2(R[0, 2], R[2, 2]),
+        jnp.arcsin(-R[1, 2]),
+        jnp.arctan2(R[1, 0], R[1, 1])
     ),
     '231': lambda R: (
-        jnp.arctan2(-R[2, 0], R[0, 0]),
-        jnp.arcsin(R[0, 1]),
-        jnp.arctan2(-R[2, 1], R[1, 1])
+        jnp.arctan2(-R[0, 2], R[0, 0]),
+        jnp.arcsin(R[1, 0]),
+        jnp.arctan2(-R[1, 2], R[1, 1])
     ),
     '321': lambda R: (
-        jnp.arctan2(R[1, 0], R[0, 0]),
-        jnp.arcsin(-R[2, 0]),
-        jnp.arctan2(R[2, 1], R[2, 2])
+        jnp.arctan2(R[0, 1], R[0, 0]),
+        jnp.arcsin(-R[0, 2]),
+        jnp.arctan2(R[1, 2], R[2, 2])
     ),
     '312': lambda R: (
-        jnp.arctan2(-R[1, 0], R[1, 1]),
-        jnp.arcsin(R[1, 2]),
-        jnp.arctan2(-R[0, 2], R[2, 2])
+        jnp.arctan2(-R[0, 1], R[1, 1]),
+        jnp.arcsin(R[2, 1]),
+        jnp.arctan2(-R[2, 0], R[2, 2])
     )
 }
 
@@ -100,7 +100,8 @@ class MiscUtil(object):
         """ Matrix representation of cross product operator of vector v.
 
         Args:
-            v (jnp.ndarray): 1x3 matrix (or broadcastable) representation of 3D vector v.
+            v (jnp.ndarray): 1x3 matrix (or broadcastable) representation
+            of 3D vector v.
 
         Returns:
             jnp.ndarray: 3x3 matrix of cross product operation. 
@@ -110,6 +111,26 @@ class MiscUtil(object):
             [[0., -v_f[2], v_f[1]],
              [v_f[2], 0., -v_f[0]],
              [-v_f[1], v_f[0], 0.]]
+        )
+
+    @staticmethod
+    def swapEuler_proper(angles: jnp.array) -> jnp.array:
+        """ Swaps proper Euler angles (form i-j-i) as follows:
+            angle1 -> angle1 % pi, angle2 -> -angle2,
+            angle3 -> angle3 % pi.  Angles should be given in radians.
+
+        Args:
+            angles (jnp.array): 1x3 matrix of proper Euler angles.
+
+        Returns:
+            jnp.array: 1x3 matrix of swapped proper Euler angles.
+        """
+        return jnp.array(
+            [
+                angles[0] - jnp.sign(angles[0]) * jnp.pi,
+                -angles[1],
+                angles[2] - jnp.sign(angles[2]) * jnp.pi
+            ]
         )
 
 class PRVUtil(object):
@@ -148,8 +169,8 @@ class Primitive(object):
         Base dcm attribute is a zero rotation (identity matrix). 
     """
     def __init__(self) -> None:
-        # Set to identity for primitives.  Does change state in subclass overrides,
-        # but shouldn't cause issues down the road...
+        # Set to identity for primitives.  Does change state in subclass
+        # overides, but shouldn't cause issues later.
         self.dcm = jnp.identity(3)
 
     def __call__(self) -> jnp.ndarray:
@@ -186,7 +207,7 @@ class Primitive(object):
         return PRVUtil.get_phi(self.dcm) - 2. * jnp.pi, PRVUtil.get_e(self.dcm)
 
     def get_eulerangles(self, ea_type: str) -> jnp.ndarray:
-        """ Returns a tuple of euler angles for given order from dcm.  
+        """ Returns a 1x3 matrix of Euler angles from DCM.
 
         Args: 
             ea_type (str): Euler angle type.  Needs to be of form
@@ -244,7 +265,7 @@ class Primitive(object):
         """ Shepard's method to get b from DCM. Makes sure b0 is positive.
 
         Returns:
-            jnp.ndarray: 1x4 matrix of quaternion parameters. 
+            jnp.ndarray: 1x4 matrix of quaternion parameters.
         """
         b = self._get_b_base()
         return b.at[0].set(jnp.abs(b[0]))
@@ -253,7 +274,7 @@ class Primitive(object):
         """ Shepard's method to get b from DCM. Makes sure b0 is negative.
 
         Returns:
-            jnp.ndarray: 1x4 matrix of quaternion parameters. 
+            jnp.ndarray: 1x4 matrix of quaternion parameters.
         """
         b = self._get_b_base()
         return b.at[0].set(-jnp.abs(b[0]))
@@ -262,7 +283,7 @@ class Primitive(object):
         """ Gets CRP q parameters from DCM. 
 
         Returns:
-            jnp.ndarray: 1x3 matrix of CRP q parameters. 
+            jnp.ndarray: 1x3 matrix of CRP q parameters.
         """
         zeta_squared = jnp.trace(self.dcm) + 1.
         return MiscUtil.antisym_dcm_vector(self.dcm) / zeta_squared
@@ -271,10 +292,11 @@ class Primitive(object):
         """ Gets MRP s parameters from DCM. 
 
         Returns:
-            jnp.ndarray: 1x3 matrix of MRP s parameters. 
+            jnp.ndarray: 1x3 matrix of MRP s parameters.
         """
         zeta = jnp.sqrt(jnp.trace(self.dcm) + 1.)
         return MiscUtil.antisym_dcm_vector(self.dcm) / zeta / (zeta + 2.)
+
 
 class BaseR(Primitive):
     """ Fundamental coordinate axis rotation primitive subclass.  

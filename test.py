@@ -3,7 +3,7 @@ import unittest
 import jax.numpy as jnp
 from jax import config
 
-from attitude.primitives import R1, R2, R3, Primitive, DCM
+from attitude.primitives import R1, R2, R3, Primitive, DCM, MiscUtil
 from attitude.eulerangles import EulerAngle
 from attitude.quaternions import Quaternion
 from attitude.rodrigues import CRP, MRP
@@ -79,15 +79,26 @@ class TestPrimitives(unittest.TestCase):
 class TestEuler(unittest.TestCase):
     """ Test for Euler angle functionality.
     """
-    def test_euler_conversion(self):
+    def test_euler_conversion_proper(self):
         test_angles = jnp.array([0.3490658700466156, -0.1745329350233078, 2.094395160675049])
-        test = EulerAngle(test_angles, '313')
-        test_out = test.get_eulerangles('313')
-        target_out = (2.7129145, 0.24619713, -2.3485403)
+        test1 = EulerAngle(test_angles, '313')
+        test1_out = MiscUtil.swapEuler_proper(test1.get_eulerangles('313'))
+        target_out = test_angles.copy()
         for i in range(3):
             self.assertAlmostEqual(
-                test_out[i], target_out[i],
-                msg='Error in Euler angle calculation from dcm.'
+                test1_out[i], target_out[i],
+                msg='Error in proper Euler angle calculation from dcm.'
+            )
+
+    def test_euler_conversion_tb(self):
+        test_angles = jnp.array([0.3490658700466156, -0.1745329350233078, 2.094395160675049])
+        test2 = EulerAngle(test_angles, '321')
+        test2_out = test2.get_eulerangles('321')
+        target_out = test_angles.copy()
+        for i in range(3):
+            self.assertAlmostEqual(
+                test2_out[i], target_out[i],
+                msg='Error in TB Euler angle calculation from dcm.'
             )
     
 
