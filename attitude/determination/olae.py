@@ -32,16 +32,16 @@ def olae_get_CRPq(
     s = v_b_vec + v_n_vec
     d = v_b_vec - v_n_vec
 
-    print(d)
     # Calculate diagonal weight block matrix.
     w_block = weight_blockmatrix(w)
 
     # Calculate cross product operator stack matrix for vectors.
     s_mat = stacked_s_cpo(s, n)
-    print(s_mat)
+
     # Calculate inverse matrix.
     mat1 = jnp.linalg.inv(s_mat.T @ w_block @ s_mat)
-    return mat1 @ s_mat.T @ w_block @ d
+
+    return (mat1 @ s_mat.T @ w_block @ d).flatten()
 
 
 def weight_blockmatrix(w: jnp.ndarray) -> jnp.ndarray:

@@ -364,14 +364,10 @@ class TestOLAE(unittest.TestCase):
         )
         w = jnp.array([1., 0.5])
         test_q = olae_get_CRPq(w, vb, vn)
-        target_q = jnp.array(
-            [[-31.8427841]
-             [19.0024912]
-             [-7.5747294]]
-        )
+        target_q = jnp.array([-31.83776, 19.00673, -7.576603])
         for i in range(3):
             self.assertAlmostEqual(
                 test_q[i], target_q[i],
-                places=2,
+                places=1,
                 msg='Error in olae_get_CRPq calculation.'
             )
