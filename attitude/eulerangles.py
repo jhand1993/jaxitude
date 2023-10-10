@@ -1,20 +1,22 @@
 from attitude.primitives import R1, R2, R3, Primitive, MiscUtil
 import jax.numpy as jnp
+from typing import Tuple
+
 
 class EulerAngle(Primitive):
-    """ Euler angle rotation sequence class.  Rotations are intrinsic. 
+    """ Euler angle rotation sequence class.  Rotations are intrinsic.
     """
     def __init__(self, angles: jnp.ndarray, order: str) -> None:
         """
         Attributes:
-            angles (jnp.ndarray): 1x3 matrix of Euler angles alpha, beta, 
+            angles (jnp.ndarray): 1x3 matrix of Euler angles alpha, beta,
                 and gamma.
-            order (str): Order of rotations as a string.  An example includes 
-                '121', 'xyx', or 'XYX for proper x-axis, y-axis, x-axis 
-                Euler angles. 
-            self.R_alpha (PrimitiveR): Rotation object for first rotation. 
-            self.R_beta (PrimitiveR): Rotation object for second rotation. 
-            self.R_gamma (PrimitiveR): Rotation object for third rotation. 
+            order (str): Order of rotations as a string.  An example includes
+                '121', 'xyx', or 'XYX for proper x-axis, y-axis, x-axis
+                Euler angles.
+            self.R_alpha (PrimitiveR): Rotation object for first rotation.
+            self.R_beta (PrimitiveR): Rotation object for second rotation.
+            self.R_gamma (PrimitiveR): Rotation object for third rotation.
             self.dcm (jnp.ndarray): Euler angle DCM.
         """
         # Define attributes.
@@ -25,17 +27,17 @@ class EulerAngle(Primitive):
         self.R_beta = f_beta(angles[1])
         self.R_gamma = f_gamma(angles[2])
         self.dcm = self.R_gamma() @ self.R_beta() @ self.R_alpha()
-    
+
     def _order_decipher(self, order: str) -> str:
         """ Function to map input string to proper string format.
 
-        Args:
-            order (str): Order of rotations as a string.  An example includes 
-                '121', 'xyx', or 'XYX for proper x-axis, y-axis, x-axis 
-                Euler angles.     
-        
+        Arguments:
+            order (str): Order of rotations as a string.  An example includes
+                '121', 'xyx', or 'XYX for proper x-axis, y-axis, x-axis
+                Euler angles.
+
         Returns:
-            str: order but in proper format. 
+            str: order but in proper format.
         """
         mapper = {
             'x': '1',
@@ -48,15 +50,16 @@ class EulerAngle(Primitive):
 
         return ''.join([mapper[i] for i in order.lower()])
 
-    def _order_rotations(self, order: str) -> tuple:
-        """ Method to map input string to rotation order. 
+    def _order_rotations(self, order: str) -> Tuple:
+        """ Method to map input string to rotation order.
 
-        Args:
-            order (_type_): Order of rotations as a string.  An example includes 
-                '121', 'xyx', or 'XYX for proper x-axis, y-axis, x-axis 
-                Euler angles. 
+        Arguments:
+            order (_type_): Order of rotations as a string.  An example
+                includes '121', 'xyx', or 'XYX for proper x-axis, y-axis,
+                x-axis Euler angles.
+
         Returns:
-            tuple: rotations of proper type per order. 
+            Tuple: rotations of proper type per order.
         """
         order_proper = self._order_decipher(order)
         mapper = {
@@ -68,26 +71,28 @@ class EulerAngle(Primitive):
         return (mapper[i] for i in order_proper)
 
     def swapEuler_proper(self):
-        """ Method to swap proper Euler angles with their valid counterparts: 
+        """ Method to swap proper Euler angles with their valid counterparts:
             angle1 -> angle1 - pi, angle2 -> -angle2,
             angle3 -> angle3 - pi.  Returns a new EulerAngle object.
-        
+
         Returns:
             EulerAngle: New EulerAngle object with swapped Euler angles.
         """
         # First, make sure the angle order is a proper Euler angle set.
         try:
             assert self.order[0] == self.order[2]
-        
+
         except AssertionError:
-            raise TypeError(f'Order {self.order} is not a proper Euler angle set.')
+            raise TypeError(
+                f'Order {self.order} is not a proper Euler angle set.'
+            )
 
         return self.__class__(
             MiscUtil.swapEuler_proper(self.angles), self.order
         )
 
     def swapEuler_proper_update(self):
-        """ Method to swap proper Euler angles with their valid counterparts: 
+        """ Method to swap proper Euler angles with their valid counterparts:
             angle1 -> angle1 % pi, angle2 -> -angle2,
             angle3 -> angle3 % pi.  Updates existing EulerAngle object.
             This method obviously changes state and is not recommended unless
@@ -96,9 +101,11 @@ class EulerAngle(Primitive):
         # First, make sure the angle order is a proper Euler angle set.
         try:
             assert self.order[0] == self.order[2]
-        
+
         except AssertionError:
-            raise TypeError(f'Order {self.order} is not a proper Euler angle set.')
+            raise TypeError(
+                f'Order {self.order} is not a proper Euler angle set.'
+            )
 
         # Update attributes accordingly.
         new_angles = MiscUtil.properEuler_swap(self.angles)

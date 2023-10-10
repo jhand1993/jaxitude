@@ -1,11 +1,13 @@
-""" 
-All attitudes will be represented by products of primitive rotations R, 
-where R is a rotation along some coordinate axis.  Here R1, will be a rotation 
-along the first coordinate component, R2 the second component, and R3 the third. 
-For example, a 3-2-1 (Z-X-Y) Euler angle rotation sequence by angles (a, b, c)
-will be M(a,b,c) = R1(c)R2(b)R3(c).
+"""
+All attitudes will be represented by products of primitive rotations R,
+where R is a rotation along some coordinate axis.  Here R1, will be a
+rotation along the first coordinate component, R2 the second component,
+and R3 the third. For example, a 3-2-1 (Z-X-Y) Euler angle rotation
+sequence by angles (a, b, c) will be M(a,b,c) = R1(c)R2(b)R3(c).
 """
 import jax.numpy as jnp
+from typing import Tuple
+
 
 # This maps Euler type to angles, given a rotation matrix R.
 eulerangle_map = {
@@ -17,7 +19,7 @@ eulerangle_map = {
     '121': lambda R: (
         jnp.arctan2(R[0, 1], -R[0, 2]),
         jnp.arccos(R[0, 0]),
-        jnp.arctan2(R[1, 0], R[2, 0])       
+        jnp.arctan2(R[1, 0], R[2, 0])
     ),
     '212': lambda R: (
         jnp.arctan2(R[1, 0], R[1, 2]),
@@ -71,13 +73,14 @@ eulerangle_map = {
     )
 }
 
+
 class MiscUtil(object):
     """ Container class for miscellaneous caluclations.
     """
     @staticmethod
     def antisym_dcm_vector(dcm: jnp.ndarray) -> jnp.ndarray:
         """ Returns [
-                dcm[1, 2] - dcm[2, 1], 
+                dcm[1, 2] - dcm[2, 1],
                 dcm[2, 0] - dcm[0, 2],
                 dcm[0, 1] - dcm[1, 0]
             ], a vector that is used in extracting PRV, CRP q, and
@@ -90,10 +93,10 @@ class MiscUtil(object):
             jnp.ndarray: 1x3 matrix
         """
         return jnp.array(
-                    [dcm[1, 2] - dcm[2, 1],
-                    dcm[2, 0] - dcm[0, 2],
-                    dcm[0, 1] - dcm[1, 0]]
-            )
+            [dcm[1, 2] - dcm[2, 1],
+             dcm[2, 0] - dcm[0, 2],
+             dcm[0, 1] - dcm[1, 0]]
+        )
 
     @staticmethod
     def cpo(v: jnp.ndarray) -> jnp.ndarray:
@@ -104,7 +107,7 @@ class MiscUtil(object):
             of 3D vector v.
 
         Returns:
-            jnp.ndarray: 3x3 matrix of cross product operation. 
+            jnp.ndarray: 3x3 matrix of cross product operation.
         """
         v_f = v.flatten()
         return jnp.array(
@@ -133,8 +136,9 @@ class MiscUtil(object):
             ]
         )
 
+
 class PRVUtil(object):
-    """ Container class for PRV calculations from dcm. 
+    """ Container class for PRV calculations from dcm.
     """
     @staticmethod
     def get_e(dcm: jnp.ndarray) -> jnp.ndarray:
@@ -164,9 +168,9 @@ class PRVUtil(object):
 
 
 class Primitive(object):
-    """ Object with __call__ returning self.dcm. Base class for all 
-        rotations and includes transformation equations from dcm. 
-        Base dcm attribute is a zero rotation (identity matrix). 
+    """ Object with __call__ returning self.dcm. Base class for all
+        rotations and includes transformation equations from dcm.
+        Base dcm attribute is a zero rotation (identity matrix).
     """
     def __init__(self) -> None:
         # Set to identity for primitives.  Does change state in subclass
@@ -174,55 +178,56 @@ class Primitive(object):
         self.dcm = jnp.identity(3)
 
     def __call__(self) -> jnp.ndarray:
-        """ Returns DCM matrix. 
+        """ Returns DCM matrix.
 
         Returns:
             jnp.ndarray: self.dcm
         """
         return self.dcm
-    
-    def get_eig(self) -> tuple:
+
+    def get_eig(self) -> Tuple:
         """ Wrapper to call JAX.numpy.linalg.eig().
 
         Returns:
-            tuple: array of eigenvalues and array of eigenvectors.
+            Tuple: array of eigenvalues and array of eigenvectors.
         """
         return jnp.linalg.eig(self.dcm)
 
-    def get_prv(self) -> tuple:
-        """ Returns principle angle phi and principle vector e from rotation matrix.
+    def get_prv(self) -> Tuple:
+        """ Returns principle angle phi and principle vector e from
+            rotation matrix.
 
         Returns:
-            tuple: phi, vec(e)
+            Tuple: phi, vec(e)
         """
         return PRVUtil.get_phi(self.dcm), PRVUtil.get_e(self.dcm)
 
-    def get_prv2(self) -> tuple:
-        """ Returns principle angle phi and principle vector e from rotation matrix for 
-            to long rotation phi' = phi - 2pi. 
+    def get_prv2(self) -> Tuple:
+        """ Returns principle angle phi and principle vector e from
+            rotation matrix for to long rotation phi' = phi - 2pi.
 
         Returns:
-            tuple: phi, vec(e)
+            Tuple: phi, vec(e)
         """
         return PRVUtil.get_phi(self.dcm) - 2. * jnp.pi, PRVUtil.get_e(self.dcm)
 
     def get_eulerangles(self, ea_type: str) -> jnp.ndarray:
         """ Returns a 1x3 matrix of Euler angles from DCM.
 
-        Args: 
+        Args:
             ea_type (str): Euler angle type.  Needs to be of form
                 '121', '321', etc for now.
         Returns:
             jnp.ndarray: 1x3 matrix of Euler angles
         """
         return jnp.asarray(eulerangle_map[ea_type](self.dcm))
-    
+
     def _get_b_base(self) -> jnp.ndarray:
         """ Returns a matrix of quaternion parameters from dcm. Uses Shepard's
-            method to avoid singularity at b0=0.  Doesn't decide shortest path. 
+            method to avoid singularity at b0=0.  Doesn't decide shortest path.
 
         Returns:
-            jnp.ndarray: 1x4 matrix of quaternion parameters. 
+            jnp.ndarray: 1x4 matrix of quaternion parameters.
         """
         tr = jnp.trace(self.dcm)
         step1 = jnp.array(
@@ -247,16 +252,36 @@ class Primitive(object):
         max_sq = jnp.sqrt(step1[max_i])
         choices = {
             0: jnp.array(
-                [max_sq, step2[0] / max_sq, step2[1] / max_sq, step2[2] / max_sq]
+                [
+                    max_sq,
+                    step2[0] / max_sq,
+                    step2[1] / max_sq,
+                    step2[2] / max_sq
+                ]
             ),
             1: jnp.array(
-                [step2[0] / max_sq, max_sq, step2[3] / max_sq, step2[4] / max_sq]
+                [
+                    step2[0] / max_sq,
+                    max_sq,
+                    step2[3] / max_sq,
+                    step2[4] / max_sq
+                ]
             ),
             2: jnp.array(
-                [step2[1] / max_sq, step2[3] / max_sq, max_sq, step2[5] / max_sq]
+                [
+                    step2[1] / max_sq,
+                    step2[3] / max_sq,
+                    max_sq,
+                    step2[5] / max_sq
+                ]
             ),
             3: jnp.array(
-                [step2[2] / max_sq, step2[4] / max_sq, step2[5] / max_sq, max_sq]
+                [
+                    step2[2] / max_sq,
+                    step2[4] / max_sq,
+                    step2[5] / max_sq,
+                    max_sq
+                ]
             )
         }
         return choices[max_i]
@@ -280,7 +305,7 @@ class Primitive(object):
         return b.at[0].set(-jnp.abs(b[0]))
 
     def get_q(self) -> jnp.ndarray:
-        """ Gets CRP q parameters from DCM. 
+        """ Gets CRP q parameters from DCM.
 
         Returns:
             jnp.ndarray: 1x3 matrix of CRP q parameters.
@@ -289,7 +314,7 @@ class Primitive(object):
         return MiscUtil.antisym_dcm_vector(self.dcm) / zeta_squared
 
     def get_s(self) -> jnp.ndarray:
-        """ Gets MRP s parameters from DCM. 
+        """ Gets MRP s parameters from DCM.
 
         Returns:
             jnp.ndarray: 1x3 matrix of MRP s parameters.
@@ -299,24 +324,27 @@ class Primitive(object):
 
 
 class BaseR(Primitive):
-    """ Fundamental coordinate axis rotation primitive subclass.  
+    """ Fundamental coordinate axis rotation primitive subclass.
 
     """
     def __init__(self, angle: float) -> None:
         """
         Attributes:
-            angle (float): Rotation angle in radians. 
+            angle (float): Rotation angle in radians.
         """
         super().__init__()
         self.angle = angle
 
     def inv_copy(self):
-        """ Return a new instance of the same rotation class with a negative angle.
+        """ Return a new instance of the same rotation class with a negative
+        angle.
 
         Returns:
-            self.__class__: New instance of the same class but with negative angle.
+            self.__class__: New instance of the same class but with negative
+            angle.
         """
         return self.__class__(-self.angle)
+
 
 class R1(BaseR):
     """ Fundamental passive rotation w.r.t. coordinate axis 1.
@@ -328,7 +356,7 @@ class R1(BaseR):
         """
         Attibutes:
             rotor (jnp.ndarray): Overwrites primitive definition
-                appropriate for R1 rotation. 
+                appropriate for R1 rotation.
         """
         super().__init__(angle)
         self.dcm = jnp.array(
@@ -336,6 +364,7 @@ class R1(BaseR):
              [0., jnp.cos(angle), jnp.sin(angle)],
              [0., -jnp.sin(angle), jnp.cos(angle)]]
         )
+
 
 class R2(BaseR):
     """ Fundamental passive rotation w.r.t. coordinate axis 2.
@@ -347,7 +376,7 @@ class R2(BaseR):
         """
         Attibutes:
             rotor (jnp.ndarray): Overwrites primitive definition
-                appropriate for R2 rotation. 
+                appropriate for R2 rotation.
         """
         super().__init__(angle)
         self.dcm = jnp.array(
@@ -367,7 +396,7 @@ class R3(BaseR):
         """
         Attibutes:
             rotor (jnp.ndarray): Overwrites primitive definition
-                appropriate for R3 rotation. 
+                appropriate for R3 rotation.
         """
         super().__init__(angle)
         self.dcm = jnp.array(
@@ -376,11 +405,12 @@ class R3(BaseR):
              [0., 0., 1.]]
         )
 
+
 class DCM(Primitive):
     """ Custom DCM
-    
+
     Args:
-        BaseR: Base class  
+        BaseR: Base class
     """
     def __init__(self, matrix: jnp.ndarray) -> None:
         """ Builds custom DCM instance
