@@ -114,7 +114,7 @@ dmypy.json
 .pyre/
 
 # vscode
-/.vscode
+.vscode/
 
 # custom test notebooks
 test*.ipynb
