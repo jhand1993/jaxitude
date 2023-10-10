@@ -46,7 +46,7 @@ def get_lam(
     return while_loop(cond_func, body_func, lam0)[0]
 
 
-def get_CRPq(
+def quest_get_CRPq(
     w: jnp.ndarray,
     v_b_set: jnp.ndarray,
     v_n_set: jnp.ndarray,
@@ -76,7 +76,7 @@ def get_CRPq(
     ).flatten()
 
 
-def get_Quatb(
+def quest_get_Quatb(
     w: jnp.ndarray,
     v_b_set: jnp.ndarray,
     v_n_set: jnp.ndarray,
@@ -95,6 +95,6 @@ def get_Quatb(
     Returns:
         jnp.ndarray: 1x4 b parameter matrix.
     """
-    q = get_CRPq(w, v_b_set, v_n_set, e=e)
+    q = quest_get_CRPq(w, v_b_set, v_n_set, e=e)
     q2 = jnp.dot(q, q)
     return jnp.array(1., q[0], q[1], q[2]) / jnp.sqrt(1. + q2)
