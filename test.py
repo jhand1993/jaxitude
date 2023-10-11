@@ -3,15 +3,15 @@ import unittest
 import jax.numpy as jnp
 from jax import config
 
-from attitude.base import R1, R2, R3, Primitive, DCM, MiscUtil
-from attitude.eulerangles import EulerAngle
-from attitude.quaternions import Quaternion
-from attitude.rodrigues import CRP, MRP
-from attitude.operations.composition import compose_quat, relative_crp, compose_mrp
-from attitude.determination.triad import get_triad_r
-from attitude.determination.davenport import get_K
-from attitude.determination.quest import quest_get_CRPq
-from attitude.determination.olae import olae_get_CRPq
+from jaxitude.base import R1, R2, R3, Primitive, DCM, MiscUtil
+from jaxitude.eulerangles import EulerAngle
+from jaxitude.quaternions import Quaternion
+from jaxitude.rodrigues import CRP, MRP
+from jaxitude.operations.composition import compose_quat, relative_crp, compose_mrp
+from jaxitude.determination.triad import get_triad_r
+from jaxitude.determination.davenport import get_K
+from jaxitude.determination.quest import quest_get_CRPq
+from jaxitude.determination.olae import olae_get_CRPq
 
 # Double precision needed for testing.
 config.update("jax_enable_x64", True)

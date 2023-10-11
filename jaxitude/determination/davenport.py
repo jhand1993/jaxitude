@@ -2,7 +2,7 @@
 """
 import jax.numpy as jnp
 
-from attitude.base import MiscUtil
+from jaxitude.base import MiscUtil
 
 
 def get_B(

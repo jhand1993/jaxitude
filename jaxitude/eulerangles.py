@@ -2,7 +2,7 @@ from typing import Tuple
 
 import jax.numpy as jnp
 
-from attitude.base import R1, R2, R3, Primitive, MiscUtil
+from jaxitude.base import R1, R2, R3, Primitive, MiscUtil
 
 
 class EulerAngle(Primitive):

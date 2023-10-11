@@ -3,7 +3,7 @@
 import jax.numpy as jnp
 from jax import jit
 
-from attitude.base import MiscUtil
+from jaxitude.base import MiscUtil
 
 
 @jit

@@ -4,8 +4,8 @@ from jax import grad, jit
 from jax.lax import while_loop
 import jax.numpy as jnp
 
-from attitude.determination.davenport import get_B
-from attitude.base import MiscUtil
+from jaxitude.determination.davenport import get_B
+from jaxitude.base import MiscUtil
 
 
 def K_eig_eq(x: float, K: jnp.ndarray) -> float:

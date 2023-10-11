@@ -6,7 +6,7 @@ from functools import partial
 import jax.numpy as jnp
 from jax import jit
 
-from attitude.base import Primitive
+from jaxitude.base import Primitive
 
 
 class PRV(Primitive):
