@@ -6,7 +6,7 @@ and R3 the third. For example, a 3-2-1 (Z-X-Y) Euler angle rotation
 sequence by angles (a, b, c) will be M(a,b,c) = R1(c)R2(b)R3(c).
 """
 from typing import Tuple
-from functools import partial
+# from functools import partial
 
 import jax.numpy as jnp
 from jax import jit
