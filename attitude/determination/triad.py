@@ -1,6 +1,7 @@
 """ Triad attitude estimation technique
 """
 import jax.numpy as jnp
+from jax import jit
 
 
 def get_triad_frame(s: jnp.ndarray, m: jnp.ndarray) -> jnp.ndarray:
@@ -25,6 +26,7 @@ def get_triad_frame(s: jnp.ndarray, m: jnp.ndarray) -> jnp.ndarray:
     return jnp.vstack([t1, t2, t3]).T
 
 
+@jit
 def get_triad_r(
     s_b: jnp.ndarray,
     m_b: jnp.ndarray,

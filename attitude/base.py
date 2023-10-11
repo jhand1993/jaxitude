@@ -5,8 +5,11 @@ rotation along the first coordinate component, R2 the second component,
 and R3 the third. For example, a 3-2-1 (Z-X-Y) Euler angle rotation
 sequence by angles (a, b, c) will be M(a,b,c) = R1(c)R2(b)R3(c).
 """
-import jax.numpy as jnp
 from typing import Tuple
+from functools import partial
+
+import jax.numpy as jnp
+from jax import jit
 
 
 # This maps Euler type to angles, given a rotation matrix R.
@@ -78,6 +81,7 @@ class MiscUtil(object):
     """ Container class for miscellaneous caluclations.
     """
     @staticmethod
+    @jit
     def antisym_dcm_vector(dcm: jnp.ndarray) -> jnp.ndarray:
         """ Returns [
                 dcm[1, 2] - dcm[2, 1],
@@ -99,6 +103,7 @@ class MiscUtil(object):
         )
 
     @staticmethod
+    @jit
     def cpo(v: jnp.ndarray) -> jnp.ndarray:
         """ Matrix representation of cross product operator of vector v.
 
@@ -117,6 +122,7 @@ class MiscUtil(object):
         )
 
     @staticmethod
+    @jit
     def swapEuler_proper(angles: jnp.array) -> jnp.array:
         """ Swaps proper Euler angles (form i-j-i) as follows:
             angle1 -> angle1 % pi, angle2 -> -angle2,
@@ -141,6 +147,7 @@ class PRVUtil(object):
     """ Container class for PRV calculations from dcm.
     """
     @staticmethod
+    @jit
     def get_e(dcm: jnp.ndarray) -> jnp.ndarray:
         """ Calculates e from dcm.
 
@@ -155,6 +162,7 @@ class PRVUtil(object):
         return e_raw / jnp.linalg.norm(e_raw)
 
     @staticmethod
+    @jit
     def get_phi(dcm: jnp.ndarray) -> float:
         """ Calculates phi from dcm.
 
@@ -222,6 +230,7 @@ class Primitive(object):
         """
         return jnp.asarray(eulerangle_map[ea_type](self.dcm))
 
+    @partial(jit, static_argnums=0)
     def _get_b_base(self) -> jnp.ndarray:
         """ Returns a matrix of quaternion parameters from dcm. Uses Shepard's
             method to avoid singularity at b0=0.  Doesn't decide shortest path.

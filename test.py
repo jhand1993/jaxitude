@@ -3,7 +3,7 @@ import unittest
 import jax.numpy as jnp
 from jax import config
 
-from attitude.primitives import R1, R2, R3, Primitive, DCM, MiscUtil
+from attitude.base import R1, R2, R3, Primitive, DCM, MiscUtil
 from attitude.eulerangles import EulerAngle
 from attitude.quaternions import Quaternion
 from attitude.rodrigues import CRP, MRP

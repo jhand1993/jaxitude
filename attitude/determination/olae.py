@@ -2,10 +2,12 @@
 """
 import jax.numpy as jnp
 from jax.scipy.linalg import block_diag
+from jax import jit
 
-from attitude.primitives import MiscUtil
+from attitude.base import MiscUtil
 
 
+@jit
 def olae_get_CRPq(
     w: jnp.ndarray,
     v_b_set: jnp.ndarray,

@@ -1,10 +1,11 @@
 """ QUEST Method implementation
 """
-from jax import grad
+from jax import grad, jit
 from jax.lax import while_loop
 import jax.numpy as jnp
+
 from attitude.determination.davenport import get_B
-from attitude.primitives import MiscUtil
+from attitude.base import MiscUtil
 
 
 def K_eig_eq(x: float, K: jnp.ndarray) -> float:
@@ -46,6 +47,7 @@ def get_lam(
     return while_loop(cond_func, body_func, lam0)[0]
 
 
+@jit
 def quest_get_CRPq(
     w: jnp.ndarray,
     v_b_set: jnp.ndarray,

@@ -1,6 +1,8 @@
-from attitude.primitives import R1, R2, R3, Primitive, MiscUtil
-import jax.numpy as jnp
 from typing import Tuple
+
+import jax.numpy as jnp
+
+from attitude.base import R1, R2, R3, Primitive, MiscUtil
 
 
 class EulerAngle(Primitive):
@@ -90,28 +92,3 @@ class EulerAngle(Primitive):
         return self.__class__(
             MiscUtil.swapEuler_proper(self.angles), self.order
         )
-
-    def swapEuler_proper_update(self):
-        """ Method to swap proper Euler angles with their valid counterparts:
-            angle1 -> angle1 % pi, angle2 -> -angle2,
-            angle3 -> angle3 % pi.  Updates existing EulerAngle object.
-            This method obviously changes state and is not recommended unless
-            memory is of serious concern.
-        """
-        # First, make sure the angle order is a proper Euler angle set.
-        try:
-            assert self.order[0] == self.order[2]
-
-        except AssertionError:
-            raise TypeError(
-                f'Order {self.order} is not a proper Euler angle set.'
-            )
-
-        # Update attributes accordingly.
-        new_angles = MiscUtil.properEuler_swap(self.angles)
-        self.angles = new_angles
-        f_alpha, f_beta, f_gamma = self._order_rotations(self.order)
-        self.R_alpha = f_alpha(new_angles[0])
-        self.R_beta = f_beta(new_angles[1])
-        self.R_gamma = f_gamma(new_angles[2])
-        self.dcm = self.R_gamma() @ self.R_beta() @ self.R_alpha()

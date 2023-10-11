@@ -1,6 +1,10 @@
-from attitude.primitives import Primitive
-import jax.numpy as jnp
 from typing import Tuple
+from functools import partial
+
+import jax.numpy as jnp
+from jax import jit
+
+from attitude.base import Primitive
 
 
 class Quaternion(Primitive):
@@ -24,6 +28,7 @@ class Quaternion(Primitive):
         self.b = b
         self.dcm = self._build_quaternion(b)
 
+    @partial(jit, static_argnums=0)
     def _build_quaternion(self, b: jnp.ndarray) -> jnp.ndarray:
         """ Builds dcm from quaternion parameters.
 

@@ -1,7 +1,8 @@
 """davenport's q method for quaternion parameters
 """
 import jax.numpy as jnp
-from attitude.primitives import MiscUtil
+
+from attitude.base import MiscUtil
 
 
 def get_B(

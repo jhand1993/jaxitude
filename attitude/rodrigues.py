@@ -1,8 +1,12 @@
 """ CRP: Classical Rodrigues Parameters: q_i = b_i / b_0.
     MRP: Modified Rodrigues Parameters: s_i = b_i / (1 + b_0).
 """
+from functools import partial
+
 import jax.numpy as jnp
-from attitude.primitives import Primitive
+from jax import jit
+
+from attitude.base import Primitive
 
 
 class CRP(Primitive):
@@ -13,6 +17,7 @@ class CRP(Primitive):
         self.q = q
         self.dcm = self._build_crp(q)
 
+    @partial(jit, static_argnums=0)
     def _build_crp(self, q: jnp.ndarray) -> jnp.ndarray:
         """ Builds dcm from CRP q parameters.
 
@@ -94,6 +99,7 @@ class MRP(Primitive):
         denom = 1. - jnp.dot(self.s, self.s)
         return 2. * self.s / denom
 
+    @partial(jit, static_argnums=0)
     def _build_mrp(self, s: jnp.ndarray) -> jnp.ndarray:
         """ Builds dcm from MRP s parameters.
 
@@ -128,6 +134,7 @@ class MRP(Primitive):
         return self.__class__(s_shadow)
 
     @staticmethod
+    @jit
     def shadow(s: jnp.array) -> jnp.array:
         """ Calculates shadow set from 1x3 matrix of MRP s values.
 
