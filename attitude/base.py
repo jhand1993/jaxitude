@@ -230,7 +230,7 @@ class Primitive(object):
         """
         return jnp.asarray(eulerangle_map[ea_type](self.dcm))
 
-    @partial(jit, static_argnums=0)
+    # @partial(jit, static_argnums=0)
     def _get_b_base(self) -> jnp.ndarray:
         """ Returns a matrix of quaternion parameters from dcm. Uses Shepard's
             method to avoid singularity at b0=0.  Doesn't decide shortest path.
@@ -247,7 +247,9 @@ class Primitive(object):
                 0.25 * (1. + 2. * self.dcm[2, 2] - tr)
             ]
         )
-        max_i = int(jnp.argmax(step1))
+
+        # Important: to jit, you need to cast using jnp.ndarray.astype.
+        max_i = jnp.argmax(step1).item()
         step2 = jnp.array(
             [
                 0.25 * (self.dcm[1, 2] - self.dcm[2, 1]),

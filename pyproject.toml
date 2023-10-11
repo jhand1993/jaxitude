@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "attitude_jhand1993"
-version = "1.0.0"
+name = "attitude"
+version = "0.1.0"
 authors = [
   { name="jhand1993" },
 ]

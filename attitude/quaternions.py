@@ -39,7 +39,11 @@ class Quaternion(Primitive):
         Returns:
             jnp.ndarray: dcm derived from quanternion parameters b.
         """
-        b0, b1, b2, b3 = b.tolist()
+        # Need to explicitly unpack for this to be jittable.
+        b0 = b[0]
+        b1 = b[1]
+        b2 = b[2]
+        b3 = b[3]
 
         return jnp.array(
             [[b0**2. + b1**2. - b2**2. - b3**2., 2. * (b1 * b2 + b0 * b3), 2. * (b1 * b3 - b0 * b2)],

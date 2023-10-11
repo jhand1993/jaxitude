@@ -66,8 +66,7 @@ def compose_mrp(s_p: jnp.ndarray, s_pp: jnp.ndarray) -> jnp.ndarray:
     """
     dot_p = jnp.dot(s_p, s_p)
     dot_pp = jnp.dot(s_pp, s_pp)
-    return ((1. - dot_pp) * s_p + (1. - dot_p) * s_pp
-            - 2. * jnp.cross(s_pp, s_p)) /\
+    return ((1. - dot_pp) * s_p + (1. - dot_p) * s_pp - 2. * jnp.cross(s_pp, s_p)) /\
         (1. + dot_p * dot_pp - 2. * jnp.dot(s_p, s_pp))
 
 # NOTE: In Progress.
