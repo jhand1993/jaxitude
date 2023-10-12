@@ -25,7 +25,7 @@ def linearize(
             M is the number of control variables.
 
     Returns:
-        Callable: Linearized version of callable f at references x_r and u_r 
+        Callable: Linearized version of callable f at references x_r and u_r
             which takes the same callable f arguments jnp.ndarrays x and u.
     """
     # Get state vector and control vector dimensions.
