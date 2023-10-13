@@ -8,19 +8,19 @@ def compose_quat(b_p: jnp.ndarray, b_pp: jnp.ndarray) -> jnp.ndarray:
         Q(b) = Q(b_pp)Q(b_p) for quaternion rotation matrix Q.
 
     Args:
-        b_p (jnp.ndarray): First rotation parameters 1x4 matrix.
-        b_pp (jnp.ndarray): second rotation parameters 1x4 matrix.
+        b_p (jnp.ndarray): First rotation parameters 4x1 matrix.
+        b_pp (jnp.ndarray): second rotation parameters 4x1 matrix.
 
     Returns:
-        jnp.ndarray: Addition of rotation parameters as 1x4 matrix.
+        jnp.ndarray: Addition of rotation parameters as 4x1 matrix.
     """
     matrix = jnp.array(
-        [[b_pp[0], -b_pp[1], -b_pp[2], -b_pp[3]],
-         [b_pp[1], b_pp[0], b_pp[3], -b_pp[2]],
-         [b_pp[2], -b_pp[3], b_pp[0], b_pp[1]],
-         [b_pp[3], b_pp[2], -b_pp[1], b_pp[0]]]
+        [[b_pp[0, 0], -b_pp[1, 0], -b_pp[2, 0], -b_pp[3, 0]],
+         [b_pp[1, 0], b_pp[0, 0], b_pp[3, 0], -b_pp[2, 0]],
+         [b_pp[2, 0], -b_pp[3, 0], b_pp[0, 0], b_pp[1, 0]],
+         [b_pp[3, 0], b_pp[2, 0], -b_pp[1, 0], b_pp[0, 0]]]
     )
-    return jnp.matmul(matrix, b_p.reshape((4, 1))).flatten()
+    return jnp.matmul(matrix, b_p)
 
 
 @jit
@@ -29,14 +29,17 @@ def compose_crp(q_p: jnp.ndarray, q_pp: jnp.ndarray) -> jnp.ndarray:
         R(q) = R(q_pp)R(q_p) for CRP rotation matrix R.
 
     Args:
-        q_p (jnp.ndarray): First CRP parameters as 1x3 matrix.
-        q_pp (jnp.ndarray): second CRP parameters as 1x3 matrix.
+        q_p (jnp.ndarray): First CRP parameters as 3x1 matrix.
+        q_pp (jnp.ndarray): second CRP parameters as 3x1 matrix.
 
     Returns:
-        jnp.ndarray: Composed CRP parameters as 1x3 matrix.
+        jnp.ndarray: Composed CRP parameters as 3x1 matrix.
     """
-    num = jnp.subtract(jnp.add(q_pp, q_p), jnp.cross(q_pp, q_p))
-    denom = 1. - jnp.dot(q_p, q_pp)
+    num = jnp.subtract(
+        jnp.add(q_pp, q_p),
+        jnp.cross(q_pp.flatten(), q_p.flatten()).reshape((3, 1))
+    )
+    denom = 1. - (q_p.T @ q_pp)[0, 0]
     return num / denom
 
 
@@ -64,10 +67,11 @@ def compose_mrp(s_p: jnp.ndarray, s_pp: jnp.ndarray) -> jnp.ndarray:
     Returns:
         jnp.ndarray: composed MRP parameters as 1x3 matrix.
     """
-    dot_p = jnp.dot(s_p, s_p)
-    dot_pp = jnp.dot(s_pp, s_pp)
-    return ((1. - dot_pp) * s_p + (1. - dot_p) * s_pp - 2. * jnp.cross(s_pp, s_p)) /\
-        (1. + dot_p * dot_pp - 2. * jnp.dot(s_p, s_pp))
+    dot_p = (s_p.T @ s_p)[0, 0]
+    dot_pp = (s_pp.T @ s_pp)[0, 0]
+    cross_spp_sp = jnp.cross(s_pp.flatten(), s_p.flatten()).reshape((3, 1))
+    return ((1. - dot_pp) * s_p + (1. - dot_p) * s_pp - 2. * cross_spp_sp) /\
+        (1. + dot_p * dot_pp - 2. * (s_p.T @ s_pp)[0, 0])
 
 # NOTE: In Progress.
 # def compose_mrp2(

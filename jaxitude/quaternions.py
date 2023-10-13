@@ -26,24 +26,24 @@ class Quaternion(Primitive):
         assert jnp.abs(jnp.linalg.norm(b) - 1.) < 1e-7, \
             'Elements of b must have unit length.'
         self.b = b
-        self.dcm = self._build_quaternion(b)
+        self.dcm = self._build_quaternion_dcm(b)
 
     @partial(jit, static_argnums=0)
-    def _build_quaternion(self, b: jnp.ndarray) -> jnp.ndarray:
+    def _build_quaternion_dcm(self, b: jnp.ndarray) -> jnp.ndarray:
         """ Builds dcm from quaternion parameters.
 
         Args:
-            b (jnp.ndarray): 1x4 matrix parameters. First component
+            b (jnp.ndarray): 4x1 matrix parameters. First component
                 is the scalar component
 
         Returns:
             jnp.ndarray: dcm derived from quanternion parameters b.
         """
         # Need to explicitly unpack for this to be jittable.
-        b0 = b[0]
-        b1 = b[1]
-        b2 = b[2]
-        b3 = b[3]
+        b0 = b[0, 0]
+        b1 = b[1, 0]
+        b2 = b[2, 0]
+        b3 = b[3, 0]
 
         return jnp.array(
             [[b0**2. + b1**2. - b2**2. - b3**2., 2. * (b1 * b2 + b0 * b3), 2. * (b1 * b3 - b0 * b2)],
@@ -69,12 +69,12 @@ class Quaternion(Primitive):
         """ Generates CRP q vector from b.
 
         Returns:
-            jnp.ndarray: 1x3 matrix of CRP q parameters.
+            jnp.ndarray: 3x1 matrix of CRP q parameters.
         """
         return jnp.array(
-            [self.b[1] / self.b[0],
-             self.b[2] / self.b[0],
-             self.b[3] / self.b[0]]
+            [[self.b[1, 0] / self.b[0, 0]],
+             [self.b[2, 0] / self.b[0, 0]],
+             [self.b[3, 0] / self.b[0, 0]]]
         )
 
     def get_s_from_b(self) -> jnp.ndarray:
@@ -84,7 +84,7 @@ class Quaternion(Primitive):
             jnp.ndarray: 1x3 matrix of MRP s parameters.
         """
         return jnp.array(
-            [self.b[1] / (1. + self.b[0]),
-             self.b[2] / (1. + self.b[0]),
-             self.b[3] / (1. + self.b[0])]
+            [[self.b[1, 0] / (1. + self.b[0, 0])],
+             [self.b[2, 0] / (1. + self.b[0, 0])],
+             [self.b[3, 0] / (1. + self.b[0, 0])]]
         )
