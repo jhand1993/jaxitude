@@ -1,8 +1,6 @@
 """
 PRV: Principle Rotation Vector.
 """
-from functools import partial
-
 import jax.numpy as jnp
 from jax import jit
 
@@ -22,10 +20,11 @@ class PRV(Primitive):
         super().__init__()
         self.phi = phi
         self.e = e
-        self.dcm = self._build_prv(phi, e)
+        self.dcm = PRV._build_prv(phi, e)
 
-    @partial(jit, static_argnums=0)
-    def _build_prv(self, phi: float, e: jnp.ndarray):
+    @staticmethod
+    @jit
+    def _build_prv(phi: float, e: jnp.ndarray):
         """ Takes input phi scalar and e vector to build PRV rotation matrix.
 
         Args:

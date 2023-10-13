@@ -1,8 +1,6 @@
 """ CRP: Classical Rodrigues Parameters: q_i = b_i / b_0.
     MRP: Modified Rodrigues Parameters: s_i = b_i / (1 + b_0).
 """
-from functools import partial
-
 import jax.numpy as jnp
 from jax import jit
 
@@ -15,10 +13,11 @@ class CRP(Primitive):
     def __init__(self, q: jnp.ndarray) -> None:
         super().__init__()
         self.q = q
-        self.dcm = self._build_crp_dcm(q)
+        self.dcm = CRP._build_crp_dcm(q)
 
-    @partial(jit, static_argnums=0)
-    def _build_crp_dcm(self, q: jnp.ndarray) -> jnp.ndarray:
+    @staticmethod
+    @jit
+    def _build_crp_dcm(q: jnp.ndarray) -> jnp.ndarray:
         """ Builds dcm from CRP q parameters.
 
         Args:
@@ -73,10 +72,11 @@ class MRP(Primitive):
     def __init__(self, s: jnp.ndarray) -> None:
         super().__init__()
         self.s = s
-        self.dcm = self._build_mrp_dcm(s)
+        self.dcm = MRP._build_mrp_dcm(s)
 
-    @partial(jit, static_argnums=0)
-    def _build_mrp_dcm(self, s: jnp.ndarray) -> jnp.ndarray:
+    @staticmethod
+    @jit
+    def _build_mrp_dcm(s: jnp.ndarray) -> jnp.ndarray:
         """ Builds dcm from MRP s parameters.
 
         Args:

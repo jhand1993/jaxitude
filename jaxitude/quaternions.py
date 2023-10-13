@@ -1,5 +1,4 @@
 from typing import Tuple
-from functools import partial
 
 import jax.numpy as jnp
 from jax import jit
@@ -26,10 +25,11 @@ class Quaternion(Primitive):
         assert jnp.abs(jnp.linalg.norm(b) - 1.) < 1e-7, \
             'Elements of b must have unit length.'
         self.b = b
-        self.dcm = self._build_quaternion_dcm(b)
+        self.dcm = Quaternion._build_quaternion_dcm(b)
 
-    @partial(jit, static_argnums=0)
-    def _build_quaternion_dcm(self, b: jnp.ndarray) -> jnp.ndarray:
+    @staticmethod
+    @jit
+    def _build_quaternion_dcm(b: jnp.ndarray) -> jnp.ndarray:
         """ Builds dcm from quaternion parameters.
 
         Args:
