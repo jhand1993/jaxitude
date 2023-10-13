@@ -18,17 +18,17 @@ def olae_get_CRPq(
 
     Args:
         w (jnp.ndarray): 1xN array of weights for N measurements.
-        v_b_set (jnp.ndarray): 1x3N, Nx3, or 3xN array of body frame headings.
-        v_n_set (jnp.ndarray): 1x3N, Nx3, or 3xN array of inertial frame
+        v_b_set (jnp.ndarray): 3xN array of body frame headings.
+        v_n_set (jnp.ndarray): 3xN array of inertial frame
             headings.
 
     Returns:
-        jnp.ndarray: 1x3 array of CRP parameters q
+        jnp.ndarray: 3x1 array of CRP parameters q
     """
     n = len(w)
     # First, convert 3xN or 1x3N arrays into 3Nx1 arrays.
-    v_b_vec = v_b_set.flatten().reshape((3 * n, 1))
-    v_n_vec = v_n_set.flatten().reshape((3 * n, 1))
+    v_b_vec = v_b_set.reshape((3 * n, 1), order='F')
+    v_n_vec = v_n_set.reshape((3 * n, 1), order='F')
 
     # Calculate summation and difference column vectors
     s = v_b_vec + v_n_vec
@@ -43,7 +43,7 @@ def olae_get_CRPq(
     # Calculate inverse matrix.
     mat1 = jnp.linalg.inv(s_mat.T @ w_block @ s_mat)
 
-    return (mat1 @ s_mat.T @ w_block @ d).flatten()
+    return mat1 @ s_mat.T @ w_block @ d
 
 
 def weight_blockmatrix(w: jnp.ndarray) -> jnp.ndarray:
