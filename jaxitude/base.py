@@ -94,12 +94,12 @@ class MiscUtil(object):
             dcm (jnp.ndarray): 3x3 dcm matrix.
 
         Returns:
-            jnp.ndarray: 1x3 matrix
+            jnp.ndarray: 3x1 matrix
         """
         return jnp.array(
-            [dcm[1, 2] - dcm[2, 1],
-             dcm[2, 0] - dcm[0, 2],
-             dcm[0, 1] - dcm[1, 0]]
+            [[dcm[1, 2] - dcm[2, 1]],
+             [dcm[2, 0] - dcm[0, 2]],
+             [dcm[0, 1] - dcm[1, 0]]]
         )
 
     @staticmethod
@@ -132,14 +132,12 @@ class MiscUtil(object):
             angles (jnp.array): 1x3 matrix of proper Euler angles.
 
         Returns:
-            jnp.array: 1x3 matrix of swapped proper Euler angles.
+            jnp.array: 3x1 matrix of swapped proper Euler angles.
         """
         return jnp.array(
-            [
-                angles[0] - jnp.sign(angles[0]) * jnp.pi,
-                -angles[1],
-                angles[2] - jnp.sign(angles[2]) * jnp.pi
-            ]
+            [[angles[0] - jnp.sign(angles[0]) * jnp.pi],
+             [-angles[1]],
+             [angles[2] - jnp.sign(angles[2]) * jnp.pi]]
         )
 
 
@@ -155,7 +153,7 @@ class PRVUtil(object):
             dcm (jnp.ndarray): dcm 3x3 matrix
 
         Returns:
-            jnp.ndarray: 1x3 array representation of e
+            jnp.ndarray: 3xz array representation of e
         """
         phi = PRVUtil.get_phi(dcm)
         e_raw = MiscUtil.antisym_dcm_vector(dcm) * 0.5 / jnp.sin(phi)
@@ -226,7 +224,7 @@ class Primitive(object):
             ea_type (str): Euler angle type.  Needs to be of form
                 '121', '321', etc for now.
         Returns:
-            jnp.ndarray: 1x3 matrix of Euler angles
+            jnp.ndarray: 3xz matrix of Euler angles
         """
         return jnp.asarray(eulerangle_map[ea_type](self.dcm))
 
@@ -236,7 +234,7 @@ class Primitive(object):
             method to avoid singularity at b0=0.  Doesn't decide shortest path.
 
         Returns:
-            jnp.ndarray: 1x4 matrix of quaternion parameters.
+            jnp.ndarray: 4x1 matrix of quaternion parameters.
         """
         tr = jnp.trace(self.dcm)
         step1 = jnp.array(
@@ -249,7 +247,7 @@ class Primitive(object):
         )
 
         # Important: to jit, you need to cast using jnp.ndarray.astype.
-        max_i = jnp.argmax(step1).item()
+        max_i = jnp.argmax(step1)
         step2 = jnp.array(
             [
                 0.25 * (self.dcm[1, 2] - self.dcm[2, 1]),
@@ -295,31 +293,31 @@ class Primitive(object):
                 ]
             )
         }
-        return choices[max_i]
+        return choices[max_i.item()]
 
     def get_b_short(self) -> jnp.ndarray:
         """ Shepard's method to get b from DCM. Makes sure b0 is positive.
 
         Returns:
-            jnp.ndarray: 1x4 matrix of quaternion parameters.
+            jnp.ndarray: 4x1 matrix of quaternion parameters.
         """
         b = self._get_b_base()
-        return b.at[0].set(jnp.abs(b[0]))
+        return b.at[0].set(jnp.abs(b[0])).reshape((4, 1))
 
     def get_b_long(self) -> jnp.ndarray:
         """ Shepard's method to get b from DCM. Makes sure b0 is negative.
 
         Returns:
-            jnp.ndarray: 1x4 matrix of quaternion parameters.
+            jnp.ndarray: 4x1 matrix of quaternion parameters.
         """
         b = self._get_b_base()
-        return b.at[0].set(-jnp.abs(b[0]))
+        return b.at[0].set(-jnp.abs(b[0])).reshape((4, 1))
 
     def get_q(self) -> jnp.ndarray:
         """ Gets CRP q parameters from DCM.
 
         Returns:
-            jnp.ndarray: 1x3 matrix of CRP q parameters.
+            jnp.ndarray: 3xz matrix of CRP q parameters.
         """
         zeta_squared = jnp.trace(self.dcm) + 1.
         return MiscUtil.antisym_dcm_vector(self.dcm) / zeta_squared
@@ -328,7 +326,7 @@ class Primitive(object):
         """ Gets MRP s parameters from DCM.
 
         Returns:
-            jnp.ndarray: 1x3 matrix of MRP s parameters.
+            jnp.ndarray: 3xz matrix of MRP s parameters.
         """
         zeta = jnp.sqrt(jnp.trace(self.dcm) + 1.)
         return MiscUtil.antisym_dcm_vector(self.dcm) / zeta / (zeta + 2.)
