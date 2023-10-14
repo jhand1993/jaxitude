@@ -117,7 +117,7 @@ class MRP(Primitive):
         return 2. * self.s / denom
 
     def inv_copy(self):
-        """ Returns new instance of MRP with q -> -q.
+        """ Returns new instance of MRP with s -> -s.
 
         Returns:
             MRP: new instance inverse MRP.
@@ -139,9 +139,9 @@ class MRP(Primitive):
         """ Calculates shadow set from 3x1 matrix of MRP s values.
 
         Args:
-            s (jnp.array): MRP s 3x1 matrix.
+            s (jnp.array): 3x1 matrix, MRP s set.
 
         Returns:
-            jnp.array: Shadow set of MRP s 3x1 matrix.
+            jnp.array: 3x1 matrix, shadow set of MRP s set.
         """
         return -s / (s.T @ s)[0, 0]

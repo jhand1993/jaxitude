@@ -12,6 +12,9 @@ from jaxitude.determination.triad import get_triad_dcm
 from jaxitude.determination.davenport import get_K
 from jaxitude.determination.quest import quest_get_CRPq
 from jaxitude.determination.olae import olae_get_CRPq
+from jaxitude.operations import evolution as ev
+from jaxitude.operations.linearization import linearize
+from jaxitude.operations.integrator import autonomous_euler, autonomous_rk4
 
 # Double precision needed for testing.
 config.update("jax_enable_x64", True)
@@ -466,7 +469,80 @@ class TestOLAE(unittest.TestCase):
                 msg='Error in olae_get_CRPq calculation.'
             )
 
+
 class TestLinearize(unittest.TestCase):
     """ Tests linearization functionality.
     """
-    
+    def test_linearize(self):
+        w_test = jnp.array(
+            [[0.1],
+             [0.0],
+             [-0.1]]
+        )
+        test_f = lambda x: ev.evolve_MRP(w_test, x)
+        s_ref = jnp.zeros((3, 1))
+        s_test = s_ref + 0.1
+        linear_f_test = linearize(test_f, 3, 0, s_ref)
+        test_s_next = linear_f_test(s_test)
+        target_s_next = jnp.array(
+            [[-0.005],
+             [0.01],
+             [-0.005]]
+        )
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_s_next[i, 0], target_s_next[i, 0],
+                places=1,
+                msg='Error in linearize.'
+            )
+
+
+class TestIntegrators(unittest.TestCase):
+    """ Unit tests for Euler's method and RK4 integrators.
+    """
+    w0 = jnp.array(
+        [[0.1],
+         [0.0],
+         [-0.1]]
+    )
+    s0 = jnp.full((3, 1), 0.1)
+    dt = 0.1
+
+    def test_auto_euler(self):
+        test_s1 = autonomous_euler(
+            ev.evolve_MRP,
+            TestIntegrators.s0,
+            TestIntegrators.dt,
+            TestIntegrators.w0
+        )
+        target_s1 = jnp.array(
+            [[0.10295],
+             [0.10145],
+             [0.10295]]
+        )
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_s1[i, 0], target_s1[i, 0],
+                places=1,
+                msg='Error in autonomous_euler.'
+            )
+
+    def test_auto_rk4(self):
+        test_s1 = autonomous_rk4(
+            ev.evolve_MRP,
+            TestIntegrators.s0,
+            TestIntegrators.dt,
+            TestIntegrators.w0
+        )
+
+        target_s1 = jnp.array(
+            [[0.1029901],
+             [0.1014529],
+             [0.1029901]]
+        )
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_s1[i, 0], target_s1[i, 0],
+                places=1,
+                msg='Error in autonomous_rk4.'
+            )
