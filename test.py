@@ -465,3 +465,8 @@ class TestOLAE(unittest.TestCase):
                 places=1,
                 msg='Error in olae_get_CRPq calculation.'
             )
+
+class TestLinearize(unittest.TestCase):
+    """ Tests linearization functionality.
+    """
+    

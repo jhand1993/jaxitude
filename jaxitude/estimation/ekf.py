@@ -5,39 +5,53 @@
 import jax.numpy as jnp
 
 from jaxitude.operations import evolution as ev
-from jaxitude.operations.linearize import linearize_dynamics
-from jaxitude.operations.linearize import linearize_dynamics_control
-from jaxitude.operations.integrator import autonomous_rk4
+# from jaxitude.operations.integrator import autonomous_rk4
 
 
-def mrp_ekf(
-    t: jnp.ndarray,
-    w_obs: jnp.ndarray,
-    Lambda: jnp.ndarray,
-    Q: jnp.ndarray,
-    bias: jnp.ndarray,
-    dt: float,
-) -> jnp.ndarray:
-    pass
-
-
-def mrp_ekf_propogate_x(
-    x_old: jnp.ndarray,
-    w_obs: jnp.ndarray,
-    bias: jnp.ndarray,
-    dt: float,
-) -> jnp.ndarray:
-    """ Integrate MRP prediction 
-
-    Args:
-        x_old (jnp.ndarray): _description_
-        w_obs (jnp.ndarray): _description_
-        bias (jnp.ndarray): _description_
-        dt (float): _description_
-
-    Returns:
-        jnp.ndarray: _description_
+class MRPEKF(object):
+    """ Container class for MRP EKF algorithm functionality.  The dynamics
+        model is dxdt = f(x|w) + g(x,eta|w), with f(x|w) describing the system's
+        kinematics and g capturing the g(x,eta|w) describing the noise
+        evolution.
     """
-    s_old = x_old[:3, :]
-    s_pred = autonomous_rk4(ev.evolve_MRP, s_old, dt)
-    return jnp.vstack(s_pred, jnp.zeros_like(s_pred))
+    @staticmethod
+    def f(
+        x: jnp.ndarray,
+        w: jnp.ndarray,
+    ) -> jnp.ndarray:
+        """ Kinematics equation f for evolve MRPs.
+
+        Args:
+            s (jnp.ndarray): State vector matrix with shape 6x1.  First three
+                components are MRP values, second three are bias measurements.
+            w (jnp.ndarray): 3x1 matrix of measured rate vector.
+
+        Returns:
+            jnp.ndarray: State rate vector matrix with shape 6x1.
+        """
+        return jnp.vstack(
+            [ev.evolve_MRP(w, x[:3, :]), jnp.zeros((3, 1))]
+        )
+
+    @staticmethod
+    def g(
+        x: jnp.ndarray,
+        w: jnp.ndarray,
+        eta: jnp.ndarray,
+    ) -> jnp.ndarray:
+        """ Noise evolution equation g for evolve MRPs.
+
+        Args:
+            s (jnp.ndarray): State vector matrix with shape 6x1.  First three
+                components are MRP values, second three are gyro bias
+                measurements.
+            w (jnp.ndarray): 3x1 matrix of measured rate vector.
+            w (jnp.ndarray): 6x1 matrix of noise vectors. First three
+                components are MRP noise, second three are gyro bias noise.
+
+        Returns:
+            jnp.ndarray: State rate vector matrix with shape 6x1.
+        """
+        return jnp.vstack(
+            [ev.evolve_MRP(w, x[:3, :]), jnp.zeros((3, 1))]
+        )

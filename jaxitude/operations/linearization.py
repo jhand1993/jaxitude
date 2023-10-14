@@ -1,6 +1,6 @@
 """ Linearization functionality for dynamics and control equaltions.
 """
-from typing import Callable
+from typing import Callable, Sequence
 
 import jax.numpy as jnp
 from jax import jacfwd
@@ -66,3 +66,63 @@ def linearize_dynamics(
 
     # Return the linearized dynamical system evaluated at reference.
     return lambda x: jac_fx @ (x - x_r)
+
+
+def linearize(
+    f: Callable,
+    n_out: int,
+    argnums: int or jnp.ndarray[int],
+    ref_vectors: jnp.ndarray or Sequence[jnp.ndarray],
+) -> Callable:
+    """ For system of differential equations f(x1, x2, ..., xk), this function
+        linearizes f about reference vectors corresponding to argnums indices.
+        For example, if f = f(x, u), where x is a state vector and u is a
+        control vector, then linearize(f, [0, 1], [ref_x, ref_u]) will return
+        f(x, u) approx Jacobian_x(f)(ref_x) @ x + Jacobian_u(f)(ref_u) @ u.
+
+        Note that the return function will not accept arguments otherwise held
+        constant during linearization.
+
+    Args:
+        f (Callable): General system of differential equations with multiple
+            argument vectors.
+        n_out (int): Dimensionality of output vector from f(x1, x2, ..., xk).
+        argnums (int or jnp.ndarray[int]): Argument indices to linearize at.
+            If an argument is skipped, then no Jacobian w.r.t. this argument is
+            calculated.  Must be the same length as ref_vectors.
+        ref_vectors (jnp.ndarrayorSequence[jnp.ndarray]): argument values to
+            linearize at. Must be the same length as ref_vectors.
+
+    Returns:
+        Callable: Linearized approximation of function f.
+    """
+    # First, convert input argnums and ref_vectors to Lists if not sequences.
+    argnums = jnp.where(
+        isinstance(argnums, int),
+        jnp.asarray([argnums]),
+        argnums
+    )
+    ref_vectors = jnp.where(
+        isinstance(ref_vectors, jnp.ndarray),
+        jnp.asarray([ref_vectors]),
+        ref_vectors
+    )
+    k = len(argnums)
+
+    # Second, get Jacobians.  This is always calcualted with jax.jacfwd since
+    # in dynamical systems linearization, the jacobian is usually square or
+    # 'tall' (more rows than columns).
+    jacs = [
+        jacfwd(
+            f,
+            argnums=argnums[i]
+        )(ref_vectors[i]).reshape((n_out, ref_vectors[i].shape[0]))
+        for i in range(k)
+    ]
+    print(jacs)
+
+    # Here, it will be expected that *args will be of length equal to
+    # ref_vectors.
+    return lambda *args: sum(
+        [jacs[i] @ args[i] for i in range(k)]
+    )
