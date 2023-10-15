@@ -10,15 +10,18 @@ import jax.numpy as jnp
 from jaxitude.base import MiscUtil
 
 
-def evolve_CRP(q: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
+def evolve_CRP(
+    q: jnp.ndarray,
+    w: jnp.ndarray
+) -> jnp.ndarray:
     """ Returns dq/dt given q(t) and w(t).
 
     Args:
-        q (jnp.ndarray): 3x1 matrix of q parameteters.
-        w (jnp.ndarray): Body angular rotation rates.
+        q (jnp.ndarray): 3x1 matrix, CRP q parameters.
+        w (jnp.ndarray): 3x1 matrix, body angular rotation rates.
 
     Returns:
-        jnp.ndarray: dq/dt at time t.
+        jnp.ndarray: 3x1 matrix, dq/dt at time t.
     """
     m = jnp.array(
         [[1. + q[0, 0]**2., q[0, 0] * q[1, 0] - q[2, 0], q[0, 0] * q[2, 0] + q[1, 0]],
@@ -28,15 +31,18 @@ def evolve_CRP(q: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
     return jnp.dot(m, w)
 
 
-def evolve_MRP(s: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
+def evolve_MRP(
+    s: jnp.ndarray,
+    w: jnp.ndarray
+) -> jnp.ndarray:
     """ Returns ds/dt given s(t) and w(t).
 
     Args:
-        s (jnp.ndarray): 3x1 matrix of s parameters.
-        w (jnp.ndarray): Body angular rotation rates.
+        s (jnp.ndarray): 3x1 matrix, MRP s parameters.
+        w (jnp.ndarray): 3x1 matrix, body angular rotation rates.
 
     Returns:
-        jnp.ndarray: ds/dt at time t.
+        jnp.ndarray: 3x1 matrix, ds/dt at time t.
     """
     s2 = (s.T @ s)[0, 0]
     m = jnp.array(
@@ -58,27 +64,30 @@ def evolve_MRP_Pmatrix(
         workflow.
 
     Args:
-        P (jnp.ndarray): Process noise matrix.
-        F (jnp.ndarray): Linearized kinematics system matrix.
-        G (jnp.ndarray): Linearized noise system matrix.
-        Lambda (jnp.ndarray): MRP measurement covariance.
-        Q (jnp.ndarray): Process noise covariance matrix.
+        P (jnp.ndarray): 6x6 matrix, process noise matrix.
+        F (jnp.ndarray): 6x6 matrix, linearized kinematics system matrix.
+        G (jnp.ndarray): 6x6 matrix, linearized noise system matrix.
+        Lambda (jnp.ndarray): 6x6 matrix, MRP measurement covariance.
+        Q (jnp.ndarray): 6x6 matrix, process noise covariance matrix.
 
     Returns:
-        jnp.ndarray: Rates for P matrix.
+        jnp.ndarray: 6x6 matrix, rates for P matrix.
     """
     return F @ P + P @ F.T + G @ Lambda @ G.T + Q
 
 
-def evolve_w_from_MRP(s: jnp.ndarray, s_dot: jnp.ndarray) -> jnp.ndarray:
+def evolve_w_from_MRP(
+    s: jnp.ndarray,
+    s_dot: jnp.ndarray
+) -> jnp.ndarray:
     """Returns w given s(t), s_dot(t).
 
     Args:
-        s (jnp.ndarray): 3x1 matrix of s parameters.
-        s_dot (jnp.ndarray) jnp.ndarray: 3x1 matrix of ds/dt at time t.
+        s (jnp.ndarray): 3x1 matrix, MRP s parameters.
+        s_dot (jnp.ndarray) jnp.ndarray: 3x1 matrix, ds/dt at time t.
 
     Returns:
-        jnp.ndarray: Body angular rotation rates.
+        jnp.ndarray: 3x1 matrix, body angular rotation rates.
     """
     s2 = (s.T @ s)[0, 0]
     m = jnp.array(
@@ -89,16 +98,19 @@ def evolve_w_from_MRP(s: jnp.ndarray, s_dot: jnp.ndarray) -> jnp.ndarray:
     return jnp.dot(m, s_dot)
 
 
-def evolve_MRP_shadow(s: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
+def evolve_MRP_shadow(
+    s: jnp.ndarray,
+    w: jnp.ndarray
+) -> jnp.ndarray:
     """ Returns ds/dt from s(t) and w(t) for the corresponding MRP shadow
         set.
 
     Args:
-        s (jnp.ndarray): 3x1 matrix of s parameteters.
-        w (jnp.ndarray): Body angular rotation rates.
+        s (jnp.ndarray): 3x1 matrix, MRP s parameters.
+        w (jnp.ndarray): 3x1 matrix, body angular rotation rates.
 
     Returns:
-        jnp.ndarray: ds/dt for MRP shadow set at time t
+        jnp.ndarray: 3x1 matrix, ds/dt for MRP shadow set at time t
     """
     s2 = (s.T @ s)[0, 0]
     in_shape = s.shape
@@ -108,15 +120,18 @@ def evolve_MRP_shadow(s: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
     ).reshape(in_shape)
 
 
-def evolve_quat(b: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
+def evolve_quat(
+    b: jnp.ndarray,
+    w: jnp.ndarray
+) -> jnp.ndarray:
     """ Returns db/dt given b(t) and w(t).
 
     Args:
-        b (jnp.ndarray): 4x1 matrix of b parameteters.
-        w (jnp.ndarray): Body angular rotation rates.
+        b (jnp.ndarray): 4x1 matrix, Quaternion b parameters.
+        w (jnp.ndarray): 3x1 matrix, Body angular rotation rates.
 
     Returns:
-    jnp.ndarray: db/dt at time t.
+        jnp.ndarray: 4x1 matrix, db/dt at time t.
     """
     # Append zero to w rate vector
     zero = jnp.zeros((1, 1))
@@ -137,16 +152,19 @@ def evolve_quat(b: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
     return jnp.dot(m, w4)
 
 
-def euler_eqs(w: jnp.array, I: jnp.array) -> jnp.array:
+def euler_eqs(
+    w: jnp.ndarray,
+    I: jnp.ndarray
+) -> jnp.ndarray:
     """ Euler equations of motion for a rigid body w.r.t. its center of mass.
         Torques are ignored.
 
     Args:
-        w (jnp.array): rate vector as 3x1 matrix
-        I (jnp.array): 3x3 matrix inertia tensor
+        w (jnp.ndarray): rate vector as 3x1 matrix
+        I (jnp.ndarray): 3x3 matrix inertia tensor
 
     Returns:
-        jnp.array: I*w_dot vector as 3x1 matrix
+        jnp.ndarray: I*w_dot vector as 3x1 matrix
     """
     I_w_dot = -MiscUtil.cpo(w) @ I @ jnp.expand_dims(w, axis=-1)
     return I_w_dot.flatten()

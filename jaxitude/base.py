@@ -78,11 +78,13 @@ eulerangle_map = {
 
 
 class MiscUtil(object):
-    """ Container class for miscellaneous caluclations.
+    """ Container class for miscellaneous calculations.
     """
     @staticmethod
     @jit
-    def antisym_dcm_vector(dcm: jnp.ndarray) -> jnp.ndarray:
+    def antisym_dcm_vector(
+        dcm: jnp.ndarray
+    ) -> jnp.ndarray:
         """ Returns [
                 dcm[1, 2] - dcm[2, 1],
                 dcm[2, 0] - dcm[0, 2],
@@ -91,7 +93,7 @@ class MiscUtil(object):
             MRP s.
 
         Args:
-            dcm (jnp.ndarray): 3x3 dcm matrix.
+            dcm (jnp.ndarray): 3x3 matrix, DCM
 
         Returns:
             jnp.ndarray: 3x1 matrix
@@ -123,7 +125,9 @@ class MiscUtil(object):
 
     @staticmethod
     @jit
-    def swapEuler_proper(angles: jnp.array) -> jnp.array:
+    def swapEuler_proper(
+        angles: jnp.array
+    ) -> jnp.array:
         """ Swaps proper Euler angles (form i-j-i) as follows:
             angle1 -> angle1 % pi, angle2 -> -angle2,
             angle3 -> angle3 % pi.  Angles should be given in radians.
@@ -138,6 +142,28 @@ class MiscUtil(object):
             [[angles[0] - jnp.sign(angles[0]) * jnp.pi],
              [-angles[1]],
              [angles[2] - jnp.sign(angles[2]) * jnp.pi]]
+        )
+
+    @staticmethod
+    @jit
+    def colvec_cross(
+        x: jnp.ndarray,
+        y: jnp.ndarray
+    ) -> jnp.ndarray:
+        """ Computes cross product directly for 3x1 matrix column vectors.
+
+        Args:
+            x (jnp.ndarray): 3x1 matrix, column vector.
+            y (jnp.ndarray): 3x1 matrix, column vector.
+
+        Returns:
+            jnp.ndarray: 3x1 matrix, column vector consistent with
+                jnp.cross(x, y).reshape((3, 1)).
+        """
+        return jnp.array(
+            [[x[1, 0] * y[2, 0] - x[2, 0] * y[1, 0]],
+             [x[2, 0] * y[0, 0] - x[0, 0] * y[2, 0]],
+             [x[0, 0] * y[1, 0] - x[1, 0] * y[0, 0]]]
         )
 
 
@@ -217,8 +243,10 @@ class Primitive(object):
         """
         return PRVUtil.get_phi(self.dcm) - 2. * jnp.pi, PRVUtil.get_e(self.dcm)
 
-    def get_eulerangles(self, ea_type: str) -> jnp.ndarray:
-        """ Returns a 1x3 matrix of Euler angles from DCM.
+    def get_eulerangles(
+        self, ea_type: str
+    ) -> jnp.ndarray:
+        """ Returns a 3x1 matrix of Euler angles from DCM.
 
         Args:
             ea_type (str): Euler angle type.  Needs to be of form

@@ -2,6 +2,7 @@ import unittest
 
 import jax.numpy as jnp
 from jax import config
+from jax.random import PRNGKey
 
 from jaxitude.base import R1, R2, R3, Primitive, DCM, MiscUtil
 from jaxitude.eulerangles import EulerAngle
@@ -15,6 +16,7 @@ from jaxitude.determination.olae import olae_get_CRPq
 from jaxitude.operations import evolution as ev
 from jaxitude.operations.linearization import linearize
 from jaxitude.operations.integrator import autonomous_euler, autonomous_rk4
+from jaxitude.operations.noise import HeadingErrorModel
 
 # Double precision needed for testing.
 config.update("jax_enable_x64", True)
@@ -545,4 +547,29 @@ class TestIntegrators(unittest.TestCase):
                 test_s1[i, 0], target_s1[i, 0],
                 places=1,
                 msg='Error in autonomous_rk4.'
+            )
+
+
+class TestNoise(unittest.TestCase):
+    """ Tests for noise models.
+    """
+    def test_heading_addnoise(self):
+        key = PRNGKey(1)
+        test_v = jnp.array(
+            [[0.],
+             [0.],
+             [1.]]
+        )
+        test_sigma_angle = 5. * jnp.pi / 180.
+        test_x = HeadingErrorModel.addnoise(key, test_v, test_sigma_angle)
+        target_x = jnp.array(
+            [[-0.01258265],
+             [-0.04857331],
+             [0.99874036]]
+        )
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_x[i, 0], target_x[i, 0],
+                places=1,
+                msg='Error in heading model for adding noise.'
             )

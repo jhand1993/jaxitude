@@ -14,8 +14,8 @@ class PRV(Primitive):
         """
         Attributes:
             phi (float): principle rotation in radians.
-            e (jax.ndarray): 3x1 array reprentation of principle axis.
-            dcm (jax.ndarray): 3x3 rotation matrix.
+            e (jax.ndarray): 3x1 matrx, principle axis vector.
+            dcm (jax.ndarray): 3x3 matrix, rotation matrix.
         """
         super().__init__()
         self.phi = phi
@@ -34,14 +34,13 @@ class PRV(Primitive):
         Returns:
             jnp.ndarray: PRV 3x3 dcm.
         """
-        cosphi = jnp.cos(phi)
-        sinphi = jnp.sin(phi)
-        sigma = 1. - cosphi
-        e1, e2, e3 = e.copy().flatten()
+        cphi = jnp.cos(phi)
+        sphi = jnp.sin(phi)
+        sigma = 1. - cphi
         return jnp.array(
-            [[e1**2. * sigma + cosphi, e1 * e2 * sigma + e3 * sinphi, e1 * e3 * sigma - e2 * sinphi],
-             [e1 * e2 * sigma - e3 * sinphi, e2**2. * sigma + cosphi, e2 * e3 * sigma + e1 * sinphi],
-             [e1 * e3 * sigma + e2 * sinphi, e2 * e3 * sigma - e1 * sinphi, e3**2. * sigma + cosphi]]
+            [[e[0, 0]**2. * sigma + cphi, e[0, 0] * e[1, 0] * sigma + e[2, 0] * sphi, e[0, 0] * e[2, 0] * sigma - e[1, 0] * sphi],
+             [e[0, 0] * e[1, 0] * sigma - e[2, 0] * sphi, e[1, 0]**2. * sigma + cphi, e[1, 0] * e[2, 0] * sigma + e[0, 0] * sphi],
+             [e[0, 0] * e[2, 0] * sigma + e[1, 0] * sphi, e[1, 0] * e[2, 0] * sigma - e[0, 0] * sphi, e[2, 0]**2. * sigma + cphi]]
         )
 
     def get_b_from_PVR(self) -> jnp.ndarray:
