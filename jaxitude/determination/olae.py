@@ -7,7 +7,6 @@ from jax import jit
 from jaxitude.base import MiscUtil
 
 
-@jit
 def olae_get_CRPq(
     w: jnp.ndarray,
     v_b_set: jnp.ndarray,
@@ -17,10 +16,9 @@ def olae_get_CRPq(
         least-squares problem using Cayley transforms.
 
     Args:
-        w (jnp.ndarray): 1xN array of weights for N measurements.
-        v_b_set (jnp.ndarray): 3xN array of body frame headings.
-        v_n_set (jnp.ndarray): 3xN array of inertial frame
-            headings.
+        w (jnp.ndarray): 1xN array, weights for N measurements.
+        v_b_set (jnp.ndarray): 3xN array, body frame headings.
+        v_n_set (jnp.ndarray): 3xN array, inertial frame headings.
 
     Returns:
         jnp.ndarray: 3x1 array of CRP parameters q
@@ -46,29 +44,31 @@ def olae_get_CRPq(
     return mat1 @ s_mat.T @ w_block @ d
 
 
+@jit
 def weight_blockmatrix(w: jnp.ndarray) -> jnp.ndarray:
     """ Creates a block matrix of w_i * I_(3x3) blocks along diagonal.
 
     Args:
-        w (jnp.ndarray): 1xN weight array.
+        w (jnp.ndarray): 1xN matrix, sensor weights.
 
     Returns:
-        jnp.ndarray: 3Nx3N block weight matrix.
+        jnp.ndarray: 3Nx3N matrix, weights block matrix.
     """
     blocks = tuple(w_i * jnp.eye(3) for w_i in w)
     return block_diag(*blocks)
 
 
+@jit
 def stacked_s_cpo(s: jnp.ndarray, n: float) -> jnp.ndarray:
     """ Creates a stacked array of cross product operators for every three
-        elements of 3Nx1 arrau s.
+        elements of 3Nx1 array s.
 
     Args:
-        s (jnp.ndarray): 3Nx1 array s.
+        s (jnp.ndarray): 3Nx1 matrix, stacked s column vectors.
         n (float): Number of measurements.
 
     Returns:
-        jnp.ndarray: 3Nx3 array of cross product operators stacked.
+        jnp.ndarray: 3Nx3 matrix, cross product operators stacked.
     """
     return jnp.vstack(
         tuple(MiscUtil.cpo(s[3 * i:3 * (i + 1)]) for i in range(n))

@@ -26,7 +26,7 @@ class CRP(Primitive):
         Returns:
             jnp.ndarray: 3x3 rotation matrix
         """
-        c = 1. + (q.T @ q)[0, 0]
+        c = 1. + jnp.vdot(q, q)
         return jnp.array(
             [[1. + q[0, 0]**2. - q[1, 0]**2. - q[2, 0]**2., 2. * (q[0, 0] * q[1, 0] + q[2, 0]), 2. * (q[0, 0] * q[2, 0] - q[1, 0])],
              [2. * (q[0, 0] * q[1, 0] - q[2, 0]), 1. - q[0, 0]**2. + q[1, 0]**2. - q[2, 0]**2., 2. * (q[1, 0] * q[2, 0] + q[0, 0])],
@@ -39,7 +39,7 @@ class CRP(Primitive):
         Returns:
             jnp.ndarray: 4x1 matrix of Euler parameters b.
         """
-        q_dot_q = (self.q.T @ self.q)[0, 0]
+        q_dot_q = jnp.vdot(self.q, self.q)
         b0 = 1. / jnp.sqrt(1. + q_dot_q)
         return jnp.array(
             [[b0],
@@ -54,7 +54,7 @@ class CRP(Primitive):
         Returns:
             jnp.ndarray: 3x1 matrix of MRP s parameters
         """
-        denom = 1. + jnp.sqrt(1. + (self.q.T @ self.q)[0, 0])
+        denom = 1. + jnp.sqrt(1. + jnp.vdot(self.q, self.q))
         return self.q / denom
 
     def inv_copy(self):
@@ -85,12 +85,12 @@ class MRP(Primitive):
         Returns:
             jnp.ndarray: 3x3 rotation matrix
         """
-        c = 1. - (s.T @ s)[0, 0]
+        c = 1. - jnp.vdot(s, s)
         return jnp.array(
             [[4. * (s[0, 0]**2. - s[1, 0]**2. - s[2, 0]**2.) + c**2., 8. * s[0, 0] * s[1, 0] + 4. * c * s[2, 0], 8. * s[0, 0] * s[2, 0] - 4. * c * s[1, 0]],
              [8. * s[0, 0] * s[1, 0] - 4. * c * s[2, 0], 4. * (- s[0, 0]**2. + s[1, 0]**2. - s[2, 0]**2.) + c**2., 8. * s[1, 0] * s[2, 0] + 4. * c * s[0, 0]],
              [8. * s[0, 0] * s[2, 0] + 4. * c * s[1, 0], 8. * s[1, 0] * s[2, 0] - 4. * c * s[0, 0], 4. * (- s[0, 0]**2. - s[1, 0]**2. + s[2, 0]**2.) + c**2.]]
-        ) / (1. + (s.T @ s)[0, 0])**2.
+        ) / (1. + jnp.vdot(s, s))**2.
 
     def get_quat_from_s(self) -> jnp.ndarray:
         """ Builds Euler parameters from MRP s.
@@ -113,7 +113,7 @@ class MRP(Primitive):
         Returns:
             jnp.ndarray: 3x1 matrix of CRP q parameters:
         """
-        denom = 1. - (self.s.T @ self.s)[0, 0]
+        denom = 1. - jnp.vdot(self.s, self.s)
         return 2. * self.s / denom
 
     def inv_copy(self):
@@ -144,4 +144,4 @@ class MRP(Primitive):
         Returns:
             jnp.array: 3x1 matrix, shadow set of MRP s set.
         """
-        return -s / (s.T @ s)[0, 0]
+        return -s / jnp.vdot(s, s)

@@ -14,10 +14,10 @@ def get_B(
         vectors should be unit vectors.
 
     Args:
-        w (jnp.ndarray): 1xN matrix of sensor weights
-        v_b_set (jnp.ndarray): 3xN matrix of N body frame headings from each
+        w (jnp.ndarray): 1xN matrix, sensor weights.
+        v_b_set (jnp.ndarray): 3xN matrix, N body frame headings from each
             sensor.
-        v_n_set (jnp.ndarray): 3xN matrix of N inertial frame headings from
+        v_n_set (jnp.ndarray): 3xN matrix, N inertial frame headings from
             each sensor.
 
     Returns:
@@ -38,10 +38,10 @@ def get_K(
         vectors should be unit vectors.
 
     Args:
-        w (jnp.ndarray): 1xN matrix of sensor weights
-        v_b_set (jnp.ndarray): 3xN matrix of N body frame headings from each
+        w (jnp.ndarray): 1xN matrix, sensor weights
+        v_b_set (jnp.ndarray): 3xN matrix, N body frame headings from each
             sensor.
-        v_n_set (jnp.ndarray): 3xN matrix of N inertial frame headings from
+        v_n_set (jnp.ndarray): 3xN matrix, N inertial frame headings from
             each sensor.
 
     Returns:
@@ -65,13 +65,13 @@ def get_g(
         vectors.
 
     Args:
-        beta (jnp.ndarray): 4x1 matrix representation of Euler parameters.
+        beta (jnp.ndarray): 4x1 matrix, Euler parameters (quaternions).
             Input for optimization. Not usually used directly, but provided for
             completeness.
-        w (jnp.ndarray): 1xN matrix of sensor weights
-        v_b_set (jnp.ndarray): 3xN matrix of N body frame headings from each
+        w (jnp.ndarray): 1xN matrix, sensor weights
+        v_b_set (jnp.ndarray): 3xN matrix, N body frame headings from each
             sensor.
-        v_n_set (jnp.ndarray): 3xN matrix of N inertial frame headings from
+        v_n_set (jnp.ndarray): 3xN matrix, N inertial frame headings from
             each sensor.
 
     Returns:

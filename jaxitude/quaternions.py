@@ -29,15 +29,17 @@ class Quaternion(Primitive):
 
     @staticmethod
     @jit
-    def _build_quaternion_dcm(b: jnp.ndarray) -> jnp.ndarray:
+    def _build_quaternion_dcm(
+        b: jnp.ndarray
+    ) -> jnp.ndarray:
         """ Builds dcm from quaternion parameters.
 
         Args:
-            b (jnp.ndarray): 4x1 matrix parameters. First component
-                is the scalar component
+            b (jnp.ndarray): 4x1 matrix, quaternion parameters. First component
+                is the scalar component.
 
         Returns:
-            jnp.ndarray: dcm derived from quanternion parameters b.
+            jnp.ndarray: 3x3 matrix, DCM derived from quanternion parameters b.
         """
         # Need to explicitly unpack for this to be jittable.
         b0 = b[0, 0]
@@ -69,7 +71,7 @@ class Quaternion(Primitive):
         """ Generates CRP q vector from b.
 
         Returns:
-            jnp.ndarray: 3x1 matrix of CRP q parameters.
+            jnp.ndarray: 3x1 matrix, CRP q parameters.
         """
         return jnp.array(
             [[self.b[1, 0] / self.b[0, 0]],
@@ -81,7 +83,7 @@ class Quaternion(Primitive):
         """ Generate MRP s vector from b.
 
         Returns:
-            jnp.ndarray: 1x3 matrix of MRP s parameters.
+            jnp.ndarray: 3x1 matrix, MRP s parameters.
         """
         return jnp.array(
             [[self.b[1, 0] / (1. + self.b[0, 0])],

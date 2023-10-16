@@ -78,7 +78,8 @@ def autonomous_rk4(
         That means if you call `autonomous_euler(f, x, *args)`, then args=(w,)
 
         A caveat of using *args is that these arguments are not properly
-        propogated through the various rk4 calculations.
+        propogated through the four intermediate rk4 calculations.
+
     Args:
         f (Callable): Callable system of equations matrix x and *args as
             arguments, in that order.
@@ -114,7 +115,7 @@ def rk4(
         That means if you call `autonomous_euler(f, x, *args)`, then args=(w,).
 
         A caveat of using *args is that these arguments are not properly
-        propogated through the various rk4 calculations.
+        propogated through the four intermediate rk4 calculations.
 
     Args:
         f (Callable): Callable system of equations with t, matrix x, and *args

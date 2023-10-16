@@ -44,7 +44,7 @@ def evolve_MRP(
     Returns:
         jnp.ndarray: 3x1 matrix, ds/dt at time t.
     """
-    s2 = (s.T @ s)[0, 0]
+    s2 = jnp.vdot(s, s)
     m = jnp.array(
         [[1. - s2 + 2. * s[0, 0]**2., 2. * (s[0, 0] * s[1, 0] - s[2, 0]), 2. * (s[0, 0] * s[2, 0] + s[1, 0])],
          [2. * (s[0, 0] * s[1, 0] + s[2, 0]), 1. - s2 + 2. * s[1, 0]**2., 2. * (s[1, 0] * s[2, 0] - s[0, 0])],
@@ -89,7 +89,7 @@ def evolve_w_from_MRP(
     Returns:
         jnp.ndarray: 3x1 matrix, body angular rotation rates.
     """
-    s2 = (s.T @ s)[0, 0]
+    s2 = jnp.vdot(s, s)
     m = jnp.array(
         [[1. - s2 + 2. * s[0, 0]**2., 2. * (s[0, 0] * s[1, 0] + s[2, 0]), 2. * (s[0, 0] * s[2, 0] - s[1, 0])],
          [2. * (s[0, 0] * s[1, 0] - s[2, 0]), 1. - s2 + 2. * s[1, 0]**2., 2. * (s[1, 0] * s[2, 0] + s[0, 0])],
@@ -112,7 +112,7 @@ def evolve_MRP_shadow(
     Returns:
         jnp.ndarray: 3x1 matrix, ds/dt for MRP shadow set at time t
     """
-    s2 = (s.T @ s)[0, 0]
+    s2 = jnp.vdot(s, s)
     in_shape = s.shape
     s_dot = evolve_MRP(w, s)
     return -s_dot / s2 + 0.5 * (1. + s2) / s2**2 * jnp.dot(
