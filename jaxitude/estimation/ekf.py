@@ -10,7 +10,7 @@ from jax.scipy.linalg import expm, block_diag
 from jaxitude.rodrigues import MRP
 from jaxitude.operations import evolution as ev
 from jaxitude.operations.integrator import autonomous_euler
-from jaxitude.operations.linearization import linearize
+from jaxitude.operations.linearization import tangent
 
 
 class MRPEKF(object):
@@ -40,6 +40,7 @@ class MRPEKF(object):
     @staticmethod
     def filter_step(
         x_prior: jnp.ndarray,
+        eta_prior: jnp.ndarray,
         P_prior: jnp.ndarray,
         w_obs: jnp.ndarray,
         s_obs: jnp.ndarray,
@@ -53,6 +54,7 @@ class MRPEKF(object):
 
         Args:
             x_prior (jnp.ndarray): 6x1 matrix, prior state vector estimate.
+            eta_prior (jnp.ndarray): 6x1 matrix, prior noise vector estimate.
             P_prior (jnp.ndarray): 6x6 matrix, prior state covariance estimate.
             w_obs (jnp.ndarray): 3x1 matrix, observed attitude rate vector.
             s_obs (jnp.ndarray): 3x1 matrix, observed attitude, represented with
@@ -78,13 +80,13 @@ class MRPEKF(object):
         }[P_propogation_method.lower()]
 
         # Get linearized kinematics and noise matrices.
-        F_prior = MRPEKF.linearize_f(x_prior, w_obs)
-        G_prior = MRPEKF.linearize_g(x_prior)
+        F_prior = MRPEKF.tangent_f(x_prior, w_obs)
+        G_prior = MRPEKF.tangent_g(x_prior)
 
         # Get posterior predictions for state vector, noise vector, and
         # covariance matrix.
         x_post = MRPEKF.pred_x(x_prior, w_obs, dt)
-        eta_post = MRPEKF.pred_eta()
+        eta_post = MRPEKF.pred_eta(x_prior, eta_prior, dt)
         P_post = P_prop(P_prior, F_prior, G_prior, R_w, Q, dt)
 
         # First shadow set check.
@@ -153,11 +155,11 @@ class MRPEKF(object):
         )
 
     @staticmethod
-    def linearize_f(
+    def tangent_f(
         x_ref: jnp.ndarray,
         w_obs: jnp.ndarray,
     ) -> jnp.ndarray:
-        """ Linearizes kinematics equation about x_ref:
+        """ Gets the linearized kinematics equation matrix at x=x_ref:
             F ~ Jac(f(x, w=w_obs))(x_ref).
 
         Args:
@@ -169,16 +171,16 @@ class MRPEKF(object):
             Callable: Linearized kinematics system matrix F.
         """
         # Linearize f(x, w=w_obs) about x_ref.
-        return linearize(
+        return tangent(
             lambda x: MRPEKF.f(x, w_obs),
             6, 0, x_ref
-        )(x_ref)
+        )
 
     @staticmethod
-    def linearize_g(
+    def tangent_g(
         x_ref: jnp.ndarray,
     ) -> Callable:
-        """ Linearizes noise equations about x_ref and eta=0:
+        """ Gets the linearized kinematics equation matrix at eta=0:
             G ~ Jac(g(x=x_ref, eta))(eta=0).
 
         Args:
@@ -188,10 +190,10 @@ class MRPEKF(object):
             Callable: Linearized noise system matrix G.
         """
         # Linearize g(x=x_ref, eta) about eta=0.
-        return linearize(
+        return tangent(
             lambda eta: MRPEKF.g(x_ref, eta),
-            6, 1, jnp.zeros((6, 1))
-        )(jnp.zeros((6, 1)))
+            6, 0, jnp.zeros((6, 1))
+        )
 
     @staticmethod
     def pred_x(
@@ -219,6 +221,7 @@ class MRPEKF(object):
 
     @staticmethod
     def pred_eta(
+        x_prior: jnp.ndarray,
         eta_prior: jnp.ndarray,
         dt: float,
     ) -> jnp.ndarray:
@@ -226,6 +229,7 @@ class MRPEKF(object):
             time interval dt.
 
         Args:
+            x_prior (jnp.ndarray): 6x1 matrix, prior state vector estimate.
             eta_prior (jnp.ndarray): 6x1 matrix, prior state error vector
                 estimate.
             dt (float): Integration time interval.
@@ -235,8 +239,9 @@ class MRPEKF(object):
         """
         return autonomous_euler(
             MRPEKF.g,
-            eta_prior,
+            x_prior,
             dt,
+            eta_prior
         )
 
     @staticmethod
@@ -365,8 +370,8 @@ class MRPEKF(object):
             jnp.ndarray: 6x3 matrix, Kalman gain that also maps MRP s prediction
                 error back to state space.
         """
-        return P_post @ MRPEKF.H.T @ jnp.linalg.inverse(
-            MRPEKF.H @ P_post @ MRPEKF.H - R_s
+        return P_post @ MRPEKF.H.T @ jnp.linalg.inv(
+            MRPEKF.H @ P_post @ MRPEKF.H.T - R_s
         )
 
     @staticmethod
@@ -382,28 +387,29 @@ class MRPEKF(object):
             jnp.ndarray: 6x1 matrix, state vector with MRP shadow set.
         """
         return jnp.vstack(
-            MRP.shadow(x[:3, :]),
-            jnp.zeros((3, 1))
+            [MRP.shadow(x[:3, :]),
+             jnp.zeros((3, 1))]
         )
 
     @staticmethod
     def P_shadow(
-        s: jnp.ndarray,
+        x: jnp.ndarray,
         P: jnp.ndarray
     ) -> jnp.ndarray:
         """ Calculates and returns MRP shadow set state covariance matrix P.
 
         Args:
-            s (jnp.ndarray): 3x1 matrix, MRP s set from state vector x.
+            x (jnp.ndarray): 3x1 matrix, state vector x.
             P (jnp.ndarray): 6x6 matrix, state covariance matrix.
 
         Returns:
             jnp.ndarray: 6x6 matrix, state covariance matrix for MRP shadow set.
         """
-        s2_inv = 1. / jnp.vdot(s, s)
-        S_mat = 2. * s2_inv**2. * (s @ s.T) - s2_inv
+        s2_inv = 1. / jnp.vdot(x[:3, :], x[:3, :])
+        S_mat = 2. * s2_inv**2. * (x[:3, :] @ x[:3, :].T) - s2_inv
+
         return jnp.block(
-            [[S_mat @ P[:3, :3]] @ S_mat.T, S_mat @ P[:3, 3:]
+            [[S_mat @ P[:3, :3] @ S_mat.T, S_mat @ P[:3, 3:]],
              [P[3:, :3] @ S_mat.T, P[3:, 3:]]]
         )
 
@@ -422,11 +428,14 @@ class MRPEKF(object):
         Returns:
             Tuple: shadow set versions of x and P.
         """
-        return jnp.where(
+        # Turns out you can't have tuples as arguments for jnp.where().
+        # This is a workaround for now.
+        result = jnp.where(
             jnp.linalg.norm(x[:3, :]) < 1.,
-            (x, P),
-            (MRPEKF.x_shadow(x), MRPEKF.P_shadow(x, P))
+            jnp.hstack([x, P]),
+            jnp.hstack([MRPEKF.x_shadow(x), MRPEKF.P_shadow(x, P)])
         )
+        return result[:, :1], result[:, 1:]
 
     @staticmethod
     def shadow_update_check(

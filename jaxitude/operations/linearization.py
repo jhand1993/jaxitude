@@ -6,6 +6,34 @@ import jax.numpy as jnp
 from jax import jacfwd
 
 
+def tangent(
+    f: Callable,
+    n_out: int,
+    argnum: int,
+    ref_vector: jnp.ndarray
+) -> jnp.ndarray:
+    """ Calculates the system's dynamics tangent to the linearization point
+        at the ref_vector.
+
+    Args:
+        f (Callable): Callable system dynamics f(x1, x2, ..., xk).
+        n_out (int): Dimensionality of output vector from f(x1, x2, ..., xk).
+        argnum (int): Argument indices to linearize at.
+        ref_vector (jnp.ndarray): Nx1 matrix, system reference point to
+            linearize at.
+
+    Returns:
+        jnp.ndarray: NxN matrix, Jacobian of linearized dynamics.
+    """
+    # This is always calculated with jax.jacfwd since in dynamical systems
+    # linearization, the jacobian is usually square or 'tall' (more rows than
+    # columns).
+    return jacfwd(
+        f,
+        argnums=argnum
+    )(ref_vector).reshape((n_out, ref_vector.shape[0]))
+
+
 def linearize(
     f: Callable,
     n_out: int,
@@ -51,16 +79,9 @@ def linearize(
     )
     k = len(argnums)
 
-    # Second, get Jacobians.  This is always calcualted with jax.jacfwd since
-    # in dynamical systems linearization, the jacobian is usually square or
-    # 'tall' (more rows than columns).
-    jacs = [
-        jacfwd(
-            f,
-            argnums=argnums[i]
-        )(ref_vectors[i]).reshape((n_out, ref_vectors[i].shape[0]))
-        for i in range(k)
-    ]
+    # Second, get Jacobians.
+    jacs = [tangent(f, n_out, argnums[i], ref_vectors[i])
+            for i in range(k)]
 
     # Here, it will be expected that *args will be equal to
     # ref_vectors.shape[0] after ref_vectors becomes an array of arrays.
