@@ -1,7 +1,7 @@
 import jax.numpy as jnp
 from jax import jit
 
-from jaxitude.base import MiscUtil
+from jaxitude.base import colvec_cross
 
 
 @jit
@@ -39,7 +39,7 @@ def compose_crp(q_p: jnp.ndarray, q_pp: jnp.ndarray) -> jnp.ndarray:
     """
     num = jnp.subtract(
         jnp.add(q_pp, q_p),
-        MiscUtil.colvec_cross(q_pp, q_p)
+        colvec_cross(q_pp, q_p)
     )
     denom = 1. - jnp.vdot(q_p, q_pp)
     return num / denom
@@ -71,7 +71,7 @@ def compose_mrp(s_p: jnp.ndarray, s_pp: jnp.ndarray) -> jnp.ndarray:
     """
     dot_p = jnp.vdot(s_p, s_p)
     dot_pp = jnp.vdot(s_pp, s_pp)
-    cross_spp_sp = MiscUtil.colvec_cross(s_pp, s_p)
+    cross_spp_sp = colvec_cross(s_pp, s_p)
     return ((1. - dot_pp) * s_p + (1. - dot_p) * s_pp - 2. * cross_spp_sp) /\
         (1. + dot_p * dot_pp - 2. * jnp.vdot(s_p, s_pp))
 

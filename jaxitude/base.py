@@ -6,7 +6,6 @@ and R3 the third. For example, a 3-2-1 (Z-X-Y) Euler angle rotation
 sequence by angles (a, b, c) will be M(a,b,c) = R1(c)R2(b)R3(c).
 """
 from typing import Tuple
-# from functools import partial
 
 import jax.numpy as jnp
 from jax import jit
@@ -76,95 +75,113 @@ eulerangle_map = {
     )
 }
 
+# Various utility functions for use with and throughout JAXitude.
 
-class MiscUtil(object):
-    """ Container class for miscellaneous calculations.
+
+@jit
+def antisym_dcm_vector(
+    dcm: jnp.ndarray
+) -> jnp.ndarray:
+    """ Returns [
+            dcm[1, 2] - dcm[2, 1],
+            dcm[2, 0] - dcm[0, 2],
+            dcm[0, 1] - dcm[1, 0]
+        ], a vector that is used in extracting PRV, CRP q, and
+        MRP s.
+
+    Args:
+        dcm (jnp.ndarray): 3x3 matrix, DCM
+
+    Returns:
+        jnp.ndarray: 3x1 matrix
     """
-    @staticmethod
-    @jit
-    def antisym_dcm_vector(
-        dcm: jnp.ndarray
-    ) -> jnp.ndarray:
-        """ Returns [
-                dcm[1, 2] - dcm[2, 1],
-                dcm[2, 0] - dcm[0, 2],
-                dcm[0, 1] - dcm[1, 0]
-            ], a vector that is used in extracting PRV, CRP q, and
-            MRP s.
+    return jnp.array(
+        [[dcm[1, 2] - dcm[2, 1]],
+            [dcm[2, 0] - dcm[0, 2]],
+            [dcm[0, 1] - dcm[1, 0]]]
+    )
 
-        Args:
-            dcm (jnp.ndarray): 3x3 matrix, DCM
 
-        Returns:
-            jnp.ndarray: 3x1 matrix
-        """
-        return jnp.array(
-            [[dcm[1, 2] - dcm[2, 1]],
-             [dcm[2, 0] - dcm[0, 2]],
-             [dcm[0, 1] - dcm[1, 0]]]
-        )
+@jit
+def cpo(v: jnp.ndarray) -> jnp.ndarray:
+    """ Matrix representation of cross product operator of vector v.
 
-    @staticmethod
-    @jit
-    def cpo(v: jnp.ndarray) -> jnp.ndarray:
-        """ Matrix representation of cross product operator of vector v.
+    Args:
+        v (jnp.ndarray): 1x3 matrix (or broadcastable) representation
+        of 3D vector v.
 
-        Args:
-            v (jnp.ndarray): 1x3 matrix (or broadcastable) representation
-            of 3D vector v.
+    Returns:
+        jnp.ndarray: 3x3 matrix of cross product operation.
+    """
+    return jnp.array(
+        [[0., -v[2, 0], v[1, 0]],
+            [v[2, 0], 0., -v[0, 0]],
+            [-v[1, 0], v[0, 0], 0.]]
+    )
 
-        Returns:
-            jnp.ndarray: 3x3 matrix of cross product operation.
-        """
-        v_f = v.flatten()
-        return jnp.array(
-            [[0., -v_f[2], v_f[1]],
-             [v_f[2], 0., -v_f[0]],
-             [-v_f[1], v_f[0], 0.]]
-        )
 
-    @staticmethod
-    @jit
-    def swapEuler_proper(
-        angles: jnp.array
-    ) -> jnp.array:
-        """ Swaps proper Euler angles (form i-j-i) as follows:
-            angle1 -> angle1 % pi, angle2 -> -angle2,
-            angle3 -> angle3 % pi.  Angles should be given in radians.
+@jit
+def swapEuler_proper(
+    angles: jnp.array
+) -> jnp.array:
+    """ Swaps proper Euler angles (form i-j-i) as follows:
+        angle1 -> angle1 % pi, angle2 -> -angle2,
+        angle3 -> angle3 % pi.  Angles should be given in radians.
 
-        Args:
-            angles (jnp.array): 1x3 matrix of proper Euler angles.
+    Args:
+        angles (jnp.array): 1x3 matrix of proper Euler angles.
 
-        Returns:
-            jnp.array: 3x1 matrix of swapped proper Euler angles.
-        """
-        return jnp.array(
-            [[angles[0] - jnp.sign(angles[0]) * jnp.pi],
-             [-angles[1]],
-             [angles[2] - jnp.sign(angles[2]) * jnp.pi]]
-        )
+    Returns:
+        jnp.array: 3x1 matrix of swapped proper Euler angles.
+    """
+    return jnp.array(
+        [[angles[0] - jnp.sign(angles[0]) * jnp.pi],
+            [-angles[1]],
+            [angles[2] - jnp.sign(angles[2]) * jnp.pi]]
+    )
 
-    @staticmethod
-    @jit
-    def colvec_cross(
-        x: jnp.ndarray,
-        y: jnp.ndarray
-    ) -> jnp.ndarray:
-        """ Computes cross product directly for 3x1 matrix column vectors.
 
-        Args:
-            x (jnp.ndarray): 3x1 matrix, column vector.
-            y (jnp.ndarray): 3x1 matrix, column vector.
+@jit
+def colvec_cross(
+    x: jnp.ndarray,
+    y: jnp.ndarray
+) -> jnp.ndarray:
+    """ Computes cross product directly for 3x1 matrix column vectors.
 
-        Returns:
-            jnp.ndarray: 3x1 matrix, column vector consistent with
-                jnp.cross(x, y).reshape((3, 1)).
-        """
-        return jnp.array(
-            [[x[1, 0] * y[2, 0] - x[2, 0] * y[1, 0]],
-             [x[2, 0] * y[0, 0] - x[0, 0] * y[2, 0]],
-             [x[0, 0] * y[1, 0] - x[1, 0] * y[0, 0]]]
-        )
+    Args:
+        x (jnp.ndarray): 3x1 matrix, column vector.
+        y (jnp.ndarray): 3x1 matrix, column vector.
+
+    Returns:
+        jnp.ndarray: 3x1 matrix, column vector consistent with
+            jnp.cross(x, y).reshape((3, 1)).
+    """
+    return jnp.array(
+        [[x[1, 0] * y[2, 0] - x[2, 0] * y[1, 0]],
+            [x[2, 0] * y[0, 0] - x[0, 0] * y[2, 0]],
+            [x[0, 0] * y[1, 0] - x[1, 0] * y[0, 0]]]
+    )
+
+
+@jit
+def find_DCM(
+    x: jnp.ndarray,
+    y: jnp.ndarray
+) -> jnp.ndarray:
+    """ Calcuates the 3x3 DCM to rotate column vector x to column vector y.
+
+    Args:
+        x (jnp.ndarray): 3x1 matrix, column vector to rotate.
+        y (jnp.ndarray): 3x1 matrix, column vector to rotate to.
+
+    Returns:
+        jnp.ndarray: 3x3 matrix, DCM matrix to rotate from x to y.
+    """
+    z = colvec_cross(x, y)
+    s2 = jnp.vdot(z, z)
+    c = jnp.cos(jnp.vdot(x, y))
+    z_op = cpo(z)
+    return jnp.eye(3) + z_op + z_op @ z_op * (1. - c) / s2
 
 
 class PRVUtil(object):
@@ -182,7 +199,7 @@ class PRVUtil(object):
             jnp.ndarray: 3xz array representation of e
         """
         phi = PRVUtil.get_phi(dcm)
-        e_raw = MiscUtil.antisym_dcm_vector(dcm) * 0.5 / jnp.sin(phi)
+        e_raw = antisym_dcm_vector(dcm) * 0.5 / jnp.sin(phi)
         return e_raw / jnp.linalg.norm(e_raw)
 
     @staticmethod
@@ -348,7 +365,7 @@ class Primitive(object):
             jnp.ndarray: 3xz matrix of CRP q parameters.
         """
         zeta_squared = jnp.trace(self.dcm) + 1.
-        return MiscUtil.antisym_dcm_vector(self.dcm) / zeta_squared
+        return antisym_dcm_vector(self.dcm) / zeta_squared
 
     def get_s(self) -> jnp.ndarray:
         """ Gets MRP s parameters from DCM.
@@ -357,7 +374,7 @@ class Primitive(object):
             jnp.ndarray: 3xz matrix of MRP s parameters.
         """
         zeta = jnp.sqrt(jnp.trace(self.dcm) + 1.)
-        return MiscUtil.antisym_dcm_vector(self.dcm) / zeta / (zeta + 2.)
+        return antisym_dcm_vector(self.dcm) / zeta / (zeta + 2.)
 
 
 class BaseR(Primitive):

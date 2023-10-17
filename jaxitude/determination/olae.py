@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax.scipy.linalg import block_diag
 from jax import jit
 
-from jaxitude.base import MiscUtil
+from jaxitude.base import cpo
 
 
 def olae_get_CRPq(
@@ -58,7 +58,6 @@ def weight_blockmatrix(w: jnp.ndarray) -> jnp.ndarray:
     return block_diag(*blocks)
 
 
-@jit
 def stacked_s_cpo(s: jnp.ndarray, n: float) -> jnp.ndarray:
     """ Creates a stacked array of cross product operators for every three
         elements of 3Nx1 array s.
@@ -70,6 +69,7 @@ def stacked_s_cpo(s: jnp.ndarray, n: float) -> jnp.ndarray:
     Returns:
         jnp.ndarray: 3Nx3 matrix, cross product operators stacked.
     """
+    # Need to figure out a better way to do this without list comprehension
     return jnp.vstack(
-        tuple(MiscUtil.cpo(s[3 * i:3 * (i + 1)]) for i in range(n))
+        jnp.array([cpo(s[3 * i:3 * (i + 1)]) for i in range(n)])
     )

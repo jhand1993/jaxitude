@@ -1,3 +1,3 @@
 # JAXitude
 
-Intuitive attitude calculations and conversions in Python written with JAX.
+Intuitive attitude calculations and estimation written with JAX.

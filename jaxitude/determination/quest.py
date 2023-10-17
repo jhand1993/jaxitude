@@ -5,7 +5,7 @@ from jax.lax import while_loop
 import jax.numpy as jnp
 
 from jaxitude.determination.davenport import get_B
-from jaxitude.base import MiscUtil
+from jaxitude.base import antisym_dcm_vector
 
 
 def K_eig_eq(x: float, K: jnp.ndarray) -> float:
@@ -71,7 +71,7 @@ def quest_get_CRPq(
     B = get_B(w, v_b_set, v_n_set)
     S = B + B.T
     sigma = jnp.trace(B)
-    Z = MiscUtil.antisym_dcm_vector(B)
+    Z = antisym_dcm_vector(B)
     K = jnp.block([[sigma, Z.T], [Z, S - jnp.eye(3) * sigma]])
 
     # Get eigen value.

@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax import config
 from jax.random import PRNGKey
 
-from jaxitude.base import R1, R2, R3, Primitive, DCM, MiscUtil
+from jaxitude.base import R1, R2, R3, Primitive, DCM, swapEuler_proper
 from jaxitude.eulerangles import EulerAngle
 from jaxitude.quaternions import Quaternion
 from jaxitude.rodrigues import CRP, MRP
@@ -16,7 +16,7 @@ from jaxitude.determination.olae import olae_get_CRPq
 from jaxitude.operations import evolution as ev
 from jaxitude.operations.linearization import linearize
 from jaxitude.operations.integrator import autonomous_euler, autonomous_rk4
-from jaxitude.operations.noise import HeadingErrorModel
+from jaxitude.operations.noise import Heading
 
 # Double precision needed for testing.
 config.update("jax_enable_x64", True)
@@ -93,7 +93,7 @@ class TestEuler(unittest.TestCase):
              [2.094395160675049]]
         )
         test1 = EulerAngle(test_angles, '313')
-        test1_out = MiscUtil.swapEuler_proper(test1.get_eulerangles('313'))
+        test1_out = swapEuler_proper(test1.get_eulerangles('313'))
         target_out = test_angles.copy()
         for i in range(3):
             self.assertAlmostEqual(
@@ -561,7 +561,7 @@ class TestNoise(unittest.TestCase):
              [1.]]
         )
         test_sigma_angle = 5. * jnp.pi / 180.
-        test_x = HeadingErrorModel.addnoise(key, test_v, test_sigma_angle)
+        test_x = Heading.addnoise(key, test_v, test_sigma_angle)
         target_x = jnp.array(
             [[-0.01258265],
              [-0.04857331],

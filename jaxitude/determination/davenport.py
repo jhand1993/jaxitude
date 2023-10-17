@@ -2,7 +2,7 @@
 """
 import jax.numpy as jnp
 
-from jaxitude.base import MiscUtil
+from jaxitude.base import antisym_dcm_vector
 
 
 def get_B(
@@ -50,7 +50,7 @@ def get_K(
     B = get_B(w, v_b_set, v_n_set)
     sigma = jnp.trace(B)
     S = B + B.T
-    Z = MiscUtil.antisym_dcm_vector(B)
+    Z = antisym_dcm_vector(B)
 
     return jnp.block([[sigma, Z.T], [Z, S - jnp.eye(3) * sigma]])
 

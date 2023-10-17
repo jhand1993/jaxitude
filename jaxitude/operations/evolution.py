@@ -7,7 +7,7 @@
 import jax.numpy as jnp
 # from jax import jit
 
-from jaxitude.base import MiscUtil
+from jaxitude.base import cpo
 
 
 def evolve_CRP(
@@ -166,5 +166,5 @@ def euler_eqs(
     Returns:
         jnp.ndarray: I*w_dot vector as 3x1 matrix
     """
-    I_w_dot = -MiscUtil.cpo(w) @ I @ jnp.expand_dims(w, axis=-1)
+    I_w_dot = -cpo(w) @ I @ jnp.expand_dims(w, axis=-1)
     return I_w_dot.flatten()

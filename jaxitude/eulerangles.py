@@ -2,7 +2,7 @@ from typing import Tuple
 
 import jax.numpy as jnp
 
-from jaxitude.base import R1, R2, R3, Primitive, MiscUtil
+from jaxitude.base import R1, R2, R3, Primitive, swapEuler_proper
 
 
 class EulerAngle(Primitive):
@@ -90,5 +90,6 @@ class EulerAngle(Primitive):
             )
 
         return self.__class__(
-            MiscUtil.swapEuler_proper(self.angles), self.order
+            swapEuler_proper(self.angles),
+            self.order
         )

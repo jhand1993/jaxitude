@@ -7,10 +7,10 @@ from jax import jit
 from jax.random import split, normal, uniform
 
 from jaxitude.prv import PRV
-from jaxitude.base import MiscUtil
+from jaxitude.base import colvec_cross
 
 
-class HeadingErrorModel():
+class Heading():
     """ Heading vector error model for producing headings measurements with
         errors from some true heading measurement.
 
@@ -39,13 +39,13 @@ class HeadingErrorModel():
 
         # Get thetas and random rotation axes.
         key, subkey = split(key)
-        theta = HeadingErrorModel.theta_pdf(subkey)
-        u, w = HeadingErrorModel.get_perp_vectors(v)
-        e = HeadingErrorModel.combination(u, w, theta)
+        theta = Heading.theta_pdf(subkey)
+        u, w = Heading.get_perp_vectors(v)
+        e = Heading.combination(u, w, theta)
 
         # Get phi and randomly rotate.
         key, subkey = split(key)
-        phi = HeadingErrorModel.phi_pdf(subkey, sigma_angle)
+        phi = Heading.phi_pdf(subkey, sigma_angle)
         return jnp.matmul(PRV(phi, e)(), v)
 
     @staticmethod
@@ -96,11 +96,11 @@ class HeadingErrorModel():
         )
 
         # Second, get first orthogonal compliment and normalize it.
-        u = MiscUtil.colvec_cross(v, u_c)
+        u = colvec_cross(v, u_c)
         u = u / jnp.linalg.norm(u)
 
         # third, get second orthogonal compliment and normalize it.
-        w = MiscUtil.colvec_cross(v, u)
+        w = colvec_cross(v, u)
         w = w / jnp.linalg.norm(w)
 
         return u, w
