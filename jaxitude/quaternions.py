@@ -52,18 +52,38 @@ class Quaternion(Primitive):
         )
 
     def get_PVR_from_b(self) -> Tuple:
-        """ Generates PVR directly from b.
+        """ Generates PVR directly from b.  If the rotation angle is
+            sufficiently close to a 4n * pi rotation, then the principal axis is
+            returned as a vector with values sqrt(3) / 3, since the principal
+            axis is degenerate for such rotations.
 
         Returns:
             tuple: scalar phi and 3x1 matrix e.
         """
-        theta = 2. * jnp.arccos(self.b[0])
-        e = jnp.array(
-            [[self.b[1] / jnp.sin(theta)],
-             [self.b[2] / jnp.sin(theta)],
-             [self.b[3] / jnp.sin(theta)]]
+        theta = 2. * jnp.arccos(self.b[0, 0])
+
+        # This conditional compares delta theta values above and below 4n * pi.
+        # That way, if theta is close 4n * pi, stability is ensured.
+        cond = jnp.logical_or(
+            jnp.isclose(
+                0., theta - jnp.ceil(0.25 * theta / jnp.pi) * 4. * jnp.pi,
+                atol=5e-4
+            ),
+            jnp.isclose(
+                0., theta - jnp.floor(0.25 * theta / jnp.pi) * 4. * jnp.pi,
+                atol=5e-4
+            )
         )
-        return theta, e
+        e = jnp.where(
+            cond,
+            jnp.full((3, 1), jnp.sqrt(3.) / 3.),
+            jnp.array(
+                [[self.b[1, 0] / jnp.sin(theta * 0.5)],
+                 [self.b[2, 0] / jnp.sin(theta * 0.5)],
+                 [self.b[3, 0] / jnp.sin(theta * 0.5)]]
+            )
+        )
+        return theta, e / jnp.linalg.norm(e)
 
     def get_q_from_b(self) -> jnp.ndarray:
         """ Generates CRP q vector from b.

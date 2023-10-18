@@ -7,14 +7,14 @@ from jaxitude.base import colvec_cross
 @jit
 def compose_quat(b_p: jnp.ndarray, b_pp: jnp.ndarray) -> jnp.ndarray:
     """ Adds Euler parameters directly via matrix multiplication:
-        Q(b) = Q(b_pp)Q(b_p) for quaternion rotation matrix Q.
+        Q(b) = Q(b_pp)Q(b_p) for quaternion rotation matrix Q.  The
 
     Args:
-        b_p (jnp.ndarray): First rotation parameters 4x1 matrix.
-        b_pp (jnp.ndarray): second rotation parameters 4x1 matrix.
+        b_p (jnp.ndarray): 4x1 matrix, first rotation parameters.
+        b_pp (jnp.ndarray): 4x1 matrix, second rotation parameters.
 
     Returns:
-        jnp.ndarray: Addition of rotation parameters as 4x1 matrix.
+        jnp.ndarray: 4x1 matrix, composition of quaternion parameters.
     """
     matrix = jnp.array(
         [[b_pp[0, 0], -b_pp[1, 0], -b_pp[2, 0], -b_pp[3, 0]],
@@ -22,7 +22,10 @@ def compose_quat(b_p: jnp.ndarray, b_pp: jnp.ndarray) -> jnp.ndarray:
          [b_pp[2, 0], -b_pp[3, 0], b_pp[0, 0], b_pp[1, 0]],
          [b_pp[3, 0], b_pp[2, 0], -b_pp[1, 0], b_pp[0, 0]]]
     )
-    return jnp.matmul(matrix, b_p)
+
+    # Make sure to satisfy unity condition for quaternion parameters.
+    b = jnp.matmul(matrix, b_p)
+    return b / jnp.linalg.norm(b)
 
 
 @jit
