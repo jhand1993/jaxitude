@@ -242,7 +242,7 @@ class Primitive(object):
         """
         return jnp.linalg.eig(self.dcm)
 
-    def get_prv(self) -> Tuple:
+    def get_PRV(self) -> Tuple:
         """ Returns principle angle phi and principle vector e from
             rotation matrix.
 
@@ -251,7 +251,7 @@ class Primitive(object):
         """
         return PRVUtil.get_phi(self.dcm), PRVUtil.get_e(self.dcm)
 
-    def get_prv2(self) -> Tuple:
+    def get_PRV2(self) -> Tuple:
         """ Returns principle angle phi and principle vector e from
             rotation matrix for to long rotation phi' = phi - 2pi.
 

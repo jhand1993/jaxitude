@@ -6,6 +6,60 @@ from jax import jit
 from jaxitude.base import Primitive
 
 
+@jit
+def quat_expm(v: jnp.ndarray) -> jnp.ndarray:
+    """ Quaternion exponential map.
+
+    Args:
+        v (jnp.ndarray): 3x1 matrix, vector to map to quaternion set b.
+
+    Returns:
+        jnp.ndarray: 4x1 matrix, quaternion set b from exponential map of v.
+    """
+    angle = jnp.linalg.norm(v)
+    return quat_expm_angleaxis(angle, v / angle)
+
+
+@jit
+def quat_expm_angleaxis(
+    angle: float,
+    e: jnp.ndarray
+) -> jnp.ndarray:
+    """ Quaternion exponential map given angle and unit vector e.
+
+    Args:
+        angle (float): Angle in radians.
+        e (jnp.ndarray): 3x1 matrix, unit vector to map to quaternion set b.
+
+    Returns:
+        jnp.ndarray: 4x1 matrix, quaternion set b from exponential map of v.
+    """
+    return jnp.array(
+        [[jnp.cos(angle * 0.5)],
+         [e[0, 0] * jnp.sin(angle * 0.5) / angle],
+         [e[1, 0] * jnp.sin(angle * 0.5) / angle],
+         [e[2, 0] * jnp.sin(angle * 0.5) / angle]]
+    )
+
+
+@jit
+def quat_inv(b: jnp.ndarray) -> jnp.ndarray:
+    """ Returns the inverse quaternion set.
+
+    Args:
+        b (jnp.ndarray): 4x1 matrix, quaternion b set to get inverse of.
+
+    Returns:
+        jnp.ndarray: 4x1 matrix, quaternion b set inverse.
+    """
+    return jnp.array(
+        [[b[0, 0]],
+            [-b[1, 0]],
+            [-b[2, 0]],
+            [-b[3, 0]]]
+    )
+
+
 class Quaternion(Primitive):
     """ quaternion rotation object. b0 is the scalar part and must
         be the first element of the input tuple b.
@@ -14,12 +68,13 @@ class Quaternion(Primitive):
         """
 
         Args:
-            b (jnp.ndarray): 1x4 matrix of quaternion parameters. First
-                component is the scalar component
+            b (jnp.ndarray): 4x1 matrix, quaternion parameters b. First
+                component is the scalar component.
 
         Attributes:
-            b (jnp.ndarray): 1x4 matrix of quaternion parameters. First
-                component is the scalar component
+            b (jnp.ndarray): 4x1 matrix, quaternion parameters b. First
+                component is the scalar component.
+            dcm (jax.ndarray): 3x3 matrix, rotation matrix.
         """
         super().__init__()
         self.b = b
@@ -115,22 +170,4 @@ class Quaternion(Primitive):
         Returns:
             Quaternion: New inverse quaternion instance.
         """
-        return self.__class__(Quaternion.inv(self.b))
-
-    @staticmethod
-    @jit
-    def inv(b: jnp.ndarray) -> jnp.ndarray:
-        """ Returns the inverse quaternion set.
-
-        Args:
-            b (jnp.ndarray): 4x1 matrix, quaternion b set to get inverse of.
-
-        Returns:
-            jnp.ndarray: 4x1 matrix, quaternion b set inverse.
-        """
-        return jnp.array(
-            [[b[0, 0]],
-             [-b[1, 0]],
-             [-b[2, 0]],
-             [-b[3, 0]]]
-        )
+        return self.__class__(quat_inv(self.b))
