@@ -49,11 +49,11 @@ class PRV(Primitive):
         Returns:
             jnp.ndarray: 4x1 matrix of Euler parameters b.
         """
-        return jnp.ndarray(
-            [[jnp.cos(self.phi / 2.)],
-             [self.e[0] * jnp.sin(self.phi / 2.)],
-             [self.e[1] * jnp.sin(self.phi / 2.)],
-             [self.e[2] * jnp.sin(self.phi / 2.)]]
+        return jnp.array(
+            [[jnp.cos(self.phi * 0.5)],
+             [self.e[0, 0] * jnp.sin(self.phi * 0.5)],
+             [self.e[1, 0] * jnp.sin(self.phi * 0.5)],
+             [self.e[2, 0] * jnp.sin(self.phi * 0.5)]]
         )
 
     def get_q_from_PVR(self) -> jnp.ndarray:
@@ -62,10 +62,10 @@ class PRV(Primitive):
         Returns:
             jnp.ndarray: 3x1 matrix of CRP q values.
         """
-        return jnp.ndarray(
-            [[self.e[0] * jnp.tan(self.phi / 2.)],
-             [self.e[1] * jnp.tan(self.phi / 2.)],
-             [self.e[2] * jnp.tan(self.phi / 2.)]]
+        return jnp.array(
+            [[self.e[0, 0] * jnp.tan(self.phi * 0.5)],
+             [self.e[1, 0] * jnp.tan(self.phi * 0.5)],
+             [self.e[2, 0] * jnp.tan(self.phi * 0.5)]]
         )
 
     def get_s_from_PVR(self) -> jnp.ndarray:
@@ -74,8 +74,8 @@ class PRV(Primitive):
         Returns:
             jnp.ndarray: 1x3 matrix of MRP s values.
         """
-        return jnp.ndarray(
-            [[self.e[0] * jnp.tan(self.phi / 4.)],
-             [self.e[1] * jnp.tan(self.phi / 4.)],
-             [self.e[2] * jnp.tan(self.phi / 4.)]]
+        return jnp.array(
+            [[self.e[0, 0] * jnp.tan(self.phi * 0.25)],
+             [self.e[1, 0] * jnp.tan(self.phi * 0.25)],
+             [self.e[2, 0] * jnp.tan(self.phi * 0.25)]]
         )

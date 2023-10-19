@@ -108,3 +108,29 @@ class Quaternion(Primitive):
              [self.b[2, 0] / (1. + self.b[0, 0])],
              [self.b[3, 0] / (1. + self.b[0, 0])]]
         )
+
+    def get_inv(self):
+        """ Returns a new Quaternion instance with inverse b set
+
+        Returns:
+            Quaternion: New inverse quaternion instance.
+        """
+        return self.__class__(Quaternion.inv(self.b))
+
+    @staticmethod
+    @jit
+    def inv(b: jnp.ndarray) -> jnp.ndarray:
+        """ Returns the inverse quaternion set.
+
+        Args:
+            b (jnp.ndarray): 4x1 matrix, quaternion b set to get inverse of.
+
+        Returns:
+            jnp.ndarray: 4x1 matrix, quaternion b set inverse.
+        """
+        return jnp.array(
+            [[b[0, 0]],
+             [-b[1, 0]],
+             [-b[2, 0]],
+             [-b[3, 0]]]
+        )
