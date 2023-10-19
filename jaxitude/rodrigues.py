@@ -92,13 +92,13 @@ class MRP(Primitive):
              [8. * s[0, 0] * s[2, 0] + 4. * c * s[1, 0], 8. * s[1, 0] * s[2, 0] - 4. * c * s[0, 0], 4. * (- s[0, 0]**2. - s[1, 0]**2. + s[2, 0]**2.) + c**2.]]
         ) / (1. + jnp.vdot(s, s))**2.
 
-    def get_quat_from_s(self) -> jnp.ndarray:
-        """ Builds Euler parameters from MRP s.
+    def get_b_from_s(self) -> jnp.ndarray:
+        """ Builds quaternion b from MRP s.
 
         Returns:
-            jnp.ndarray: 4x1 matrix of Euler parameters b.
+            jnp.ndarray: 4x1 matrix, quaternion b.
         """
-        s_dot_s = jnp.dot(self.s, self.s)
+        s_dot_s = jnp.vdot(self.s, self.s)
         c = 1. / (1. + s_dot_s)
         return jnp.array(
             [[(1. - s_dot_s) * c],
