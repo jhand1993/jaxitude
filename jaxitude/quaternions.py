@@ -36,9 +36,9 @@ def quat_expm_angleaxis(
     """
     return jnp.array(
         [[jnp.cos(angle * 0.5)],
-         [e[0, 0] * jnp.sin(angle * 0.5) / angle],
-         [e[1, 0] * jnp.sin(angle * 0.5) / angle],
-         [e[2, 0] * jnp.sin(angle * 0.5) / angle]]
+         [e[0, 0] * jnp.sin(angle * 0.5)],
+         [e[1, 0] * jnp.sin(angle * 0.5)],
+         [e[2, 0] * jnp.sin(angle * 0.5)]]
     )
 
 
@@ -106,7 +106,7 @@ class Quaternion(Primitive):
              [2. * (b1 * b3 + b0 * b2), 2. * (b2 * b3 - b0 * b1), b0**2. - b1**2. - b2**2. + b3**2.]]
         )
 
-    def get_PVR_from_b(self) -> Tuple:
+    def get_PRV_from_b(self) -> Tuple:
         """ Generates PVR directly from b.  If the rotation angle is
             sufficiently close to a 4n * pi rotation, then the principal axis is
             returned as a vector with values sqrt(3) / 3, since the principal

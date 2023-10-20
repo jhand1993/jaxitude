@@ -16,7 +16,7 @@ from jaxitude.determination.olae import olae_get_CRPq
 from jaxitude.operations import evolution as ev
 from jaxitude.operations.linearization import linearize
 from jaxitude.operations.integrator import autonomous_euler, autonomous_rk4
-from jaxitude.operations.noise import Heading
+from jaxitude.operations.noise import HeadingNoise, QuatNoise
 
 # Double precision needed for testing.
 config.update("jax_enable_x64", True)
@@ -127,7 +127,7 @@ class TestPRV(unittest.TestCase):
              [-0.26179939]]
         )
         test = EulerAngle(test_angles, '321')
-        test_theta, test_e = test.get_prv()
+        test_theta, test_e = test.get_PRV()
         target_theta = 0.55459931377
         target_e = jnp.array(
             [[-0.532035],
@@ -561,7 +561,7 @@ class TestNoise(unittest.TestCase):
              [1.]]
         )
         test_sigma_angle = 5. * jnp.pi / 180.
-        test_x = Heading.addnoise(key, test_v, test_sigma_angle)
+        test_x = HeadingNoise.addnoise(key, test_v, test_sigma_angle)
         target_x = jnp.array(
             [[-0.01258265],
              [-0.04857331],
@@ -572,4 +572,44 @@ class TestNoise(unittest.TestCase):
                 test_x[i, 0], target_x[i, 0],
                 places=1,
                 msg='Error in heading model for adding noise.'
+            )
+
+    def test_quaternion_addnoise(self):
+        test_b = jnp.array(
+            [[0.],
+             [1.],
+             [0.],
+             [0.]]
+        )
+
+        sig_dtheta = 0.1
+        sig_dphi = 0.05
+
+        key = PRNGKey(1)
+        test_b_err1 = QuatNoise.addnoise(key, test_b, sig_dtheta)
+        test_b_err2 = QuatNoise.addnoise_perturbaxis(
+            key, test_b, sig_dtheta, sig_dphi
+        )
+        target_b_err1 = jnp.array(
+            [[0.04036935],
+             [0.99918483],
+             [0.],
+             [0.]]
+        )
+        target_b_err2 = jnp.array(
+            [[2.00078451e-02],
+             [9.99799657e-01],
+             [1.44343451e-04],
+             [5.57215088e-04]]
+        )
+        for i in range(3):
+            self.assertAlmostEqual(
+                test_b_err1[i, 0], target_b_err1[i, 0],
+                places=1,
+                msg='Error in quaternion model for adding angle noise.'
+            )
+            self.assertAlmostEqual(
+                test_b_err2[i, 0], target_b_err2[i, 0],
+                places=1,
+                msg='Error in quaternion model for adding angle and axis noise.'
             )

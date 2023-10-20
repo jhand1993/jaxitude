@@ -12,7 +12,6 @@ from jaxitude.operations.composition import compose_quat
 from jaxitude.base import colvec_cross
 
 
-@staticmethod
 @jit
 def theta_pdf(
     key: int,
@@ -100,14 +99,14 @@ class HeadingNoise():
     def addnoise(
         key: int,
         v: jnp.ndarray,
-        sigma_angle: float
+        sigma_dphi: float
     ) -> jnp.ndarray:
         """ Add noise to heading vector v. Heading vector should be unit vector.
 
         Args:
             key (int): Random key.
             v (jnp.ndarray): 3x1 matrix, unit vector to add noise to.
-            sigma_angle (float): Standard deviation for noise PDF in radians.
+            sigma_dphi (float): Standard deviation for noise PDF in radians.
 
         Returns:
             jnp.ndarray: 3x1 matrix, noise-corrupted unit vector.
@@ -120,26 +119,26 @@ class HeadingNoise():
 
         # Get phi and randomly rotate.
         key, subkey = split(key)
-        phi = HeadingNoise.phi_pdf(subkey, sigma_angle)
-        return jnp.matmul(PRV(phi, e)(), v)
+        dphi = HeadingNoise.dphi_pdf(subkey, sigma_dphi)
+        return jnp.matmul(PRV(dphi, e)(), v)
 
     @staticmethod
     @jit
-    def phi_pdf(
+    def dphi_pdf(
         key: int,
-        sigma_phi: float
+        sigma_dphi: float
     ) -> float:
         """ Normal PDF centered at zero with standard deviation sigma_phi.
             Used to sample random rotation angles.
 
         Args:
             key (int): Random key.
-            sigma_phi (float): Standard deviation of phi_pdf in radians.
+            sigma_dphi (float): Standard deviation of dphi_pdf in radians.
 
         Returns:
             float: Sampled phi.
         """
-        return normal(key) * sigma_phi
+        return normal(key) * sigma_dphi
 
 
 class QuatNoise():
@@ -184,7 +183,7 @@ class QuatNoise():
             jnp.ndarray: 4x1 matrix, noise-corrupted quaternion set b.
         """
         # Get principal rotation axis from b.
-        e_b = Quaternion(b).get_PVR_from_b()[1]
+        e_b = Quaternion(b).get_PRV_from_b()[1]
 
         # Build perturbing quaternion.
         key, subkey = split(key)
@@ -220,7 +219,7 @@ class QuatNoise():
             jnp.ndarray: 4x1 matrix, noise-corrupted quaternion set b.
         """
         # Get principal rotation axis from b.
-        e_b = Quaternion(b).get_PVR_from_b()[1]
+        e_b = Quaternion(b).get_PRV_from_b()[1]
 
         # Get theta and perpendicular rotation axis choice.  Note that this
         # theta is totally different than 'dtheta', instead being a uniformly
@@ -237,7 +236,7 @@ class QuatNoise():
 
         # Build perturbing quaternion.
         key, subkey = split(key)
-        dtheta = QuatNoise.dtheta_pdf(subkey, sigma_dtheta)
+        dtheta = QuatNoise.dx_pdf(subkey, sigma_dtheta)
         b_err = quat_expm_angleaxis(dtheta, de_dphi)
 
         # Compose input b with b_err
