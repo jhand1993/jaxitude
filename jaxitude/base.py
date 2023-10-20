@@ -9,6 +9,7 @@ from typing import Tuple
 
 import jax.numpy as jnp
 from jax import jit
+from jax.lax import switch
 
 
 # This maps Euler type to angles, given a rotation matrix R.
@@ -97,8 +98,8 @@ def antisym_dcm_vector(
     """
     return jnp.array(
         [[dcm[1, 2] - dcm[2, 1]],
-            [dcm[2, 0] - dcm[0, 2]],
-            [dcm[0, 1] - dcm[1, 0]]]
+         [dcm[2, 0] - dcm[0, 2]],
+         [dcm[0, 1] - dcm[1, 0]]]
     )
 
 
@@ -115,8 +116,8 @@ def cpo(v: jnp.ndarray) -> jnp.ndarray:
     """
     return jnp.array(
         [[0., -v[2, 0], v[1, 0]],
-            [v[2, 0], 0., -v[0, 0]],
-            [-v[1, 0], v[0, 0], 0.]]
+         [v[2, 0], 0., -v[0, 0]],
+         [-v[1, 0], v[0, 0], 0.]]
     )
 
 
@@ -136,8 +137,8 @@ def swapEuler_proper(
     """
     return jnp.array(
         [[angles[0] - jnp.sign(angles[0]) * jnp.pi],
-            [-angles[1]],
-            [angles[2] - jnp.sign(angles[2]) * jnp.pi]]
+         [-angles[1]],
+         [angles[2] - jnp.sign(angles[2]) * jnp.pi]]
     )
 
 
@@ -158,8 +159,8 @@ def colvec_cross(
     """
     return jnp.array(
         [[x[1, 0] * y[2, 0] - x[2, 0] * y[1, 0]],
-            [x[2, 0] * y[0, 0] - x[0, 0] * y[2, 0]],
-            [x[0, 0] * y[1, 0] - x[1, 0] * y[0, 0]]]
+         [x[2, 0] * y[0, 0] - x[0, 0] * y[2, 0]],
+         [x[0, 0] * y[1, 0] - x[1, 0] * y[0, 0]]]
     )
 
 
@@ -269,7 +270,7 @@ class Primitive(object):
             ea_type (str): Euler angle type.  Needs to be of form
                 '121', '321', etc for now.
         Returns:
-            jnp.ndarray: 3xz matrix of Euler angles
+            jnp.ndarray: 3x3 matrix, Euler angles
         """
         return jnp.asarray(eulerangle_map[ea_type](self.dcm))
 
@@ -279,7 +280,7 @@ class Primitive(object):
             method to avoid singularity at b0=0.  Doesn't decide shortest path.
 
         Returns:
-            jnp.ndarray: 4x1 matrix of quaternion parameters.
+            jnp.ndarray: 4x1 matrix, quaternion parameters.
         """
         tr = jnp.trace(self.dcm)
         step1 = jnp.array(
@@ -304,41 +305,33 @@ class Primitive(object):
             ]
         )
         max_sq = jnp.sqrt(step1[max_i])
-        choices = {
-            0: jnp.array(
-                [
-                    max_sq,
-                    step2[0] / max_sq,
-                    step2[1] / max_sq,
-                    step2[2] / max_sq
-                ]
+        choices = (
+            lambda *args: jnp.array(
+                [[max_sq],
+                 [step2[0] / max_sq],
+                 [step2[1] / max_sq],
+                 [step2[2] / max_sq]]
             ),
-            1: jnp.array(
-                [
-                    step2[0] / max_sq,
-                    max_sq,
-                    step2[3] / max_sq,
-                    step2[4] / max_sq
-                ]
+            lambda *args: jnp.array(
+                [[step2[0] / max_sq],
+                 [max_sq],
+                 [step2[5] / max_sq],
+                 [step2[4] / max_sq]]
             ),
-            2: jnp.array(
-                [
-                    step2[1] / max_sq,
-                    step2[3] / max_sq,
-                    max_sq,
-                    step2[5] / max_sq
-                ]
+            lambda *args: jnp.array(
+                [[step2[1] / max_sq],
+                 [step2[5] / max_sq],
+                 [max_sq],
+                 [step2[3] / max_sq]]
             ),
-            3: jnp.array(
-                [
-                    step2[2] / max_sq,
-                    step2[4] / max_sq,
-                    step2[5] / max_sq,
-                    max_sq
-                ]
+            lambda *args: jnp.array(
+                [[step2[2] / max_sq],
+                 [step2[4] / max_sq],
+                 [step2[5] / max_sq],
+                 [max_sq]]
             )
-        }
-        return choices[max_i.item()]
+        )
+        return switch(max_i, choices)
 
     def get_b_short(self) -> jnp.ndarray:
         """ Shepard's method to get b from DCM. Makes sure b0 is positive.
@@ -347,7 +340,8 @@ class Primitive(object):
             jnp.ndarray: 4x1 matrix of quaternion parameters.
         """
         b = self._get_b_base()
-        return b.at[0].set(jnp.abs(b[0])).reshape((4, 1))
+        return b
+        # return b.at[1:, 0].set(jnp.abs(b[1:, 0]))
 
     def get_b_long(self) -> jnp.ndarray:
         """ Shepard's method to get b from DCM. Makes sure b0 is negative.
@@ -356,7 +350,7 @@ class Primitive(object):
             jnp.ndarray: 4x1 matrix of quaternion parameters.
         """
         b = self._get_b_base()
-        return b.at[0].set(-jnp.abs(b[0])).reshape((4, 1))
+        return b.at[1:, 0].set(-jnp.abs(b[1:, 0]))
 
     def get_q(self) -> jnp.ndarray:
         """ Gets CRP q parameters from DCM.

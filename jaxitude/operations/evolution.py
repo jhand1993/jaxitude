@@ -115,8 +115,8 @@ def evolve_MRP_shadow(
     s2 = jnp.vdot(s, s)
     in_shape = s.shape
     s_dot = evolve_MRP(w, s)
-    return -s_dot / s2 + 0.5 * (1. + s2) / s2**2 * jnp.dot(
-        s @ s.T, w.reshape((3, 1))
+    return -s_dot / s2 + 0.5 * (1. + s2) / s2**2 * jnp.matmul(
+        s @ s.T, w
     ).reshape(in_shape)
 
 

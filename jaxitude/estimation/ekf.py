@@ -7,7 +7,7 @@ from typing import Callable, Tuple
 import jax.numpy as jnp
 from jax.scipy.linalg import expm, block_diag
 
-from jaxitude.rodrigues import MRP
+from jaxitude.rodrigues import shadow
 from jaxitude.operations import evolution as ev
 from jaxitude.operations.integrator import autonomous_euler
 from jaxitude.operations.linearization import tangent
@@ -19,7 +19,7 @@ class MRPEKF(object):
         The dynamics model here is assumed be dxdt = f(x|w) + g(x,eta), with
         f(x|w) describing the system's kinematics and g(x,eta) describing the
         noise evolution.  The underlying process is time-continuous and
-        measurements are time-discrete.  The variable convention is:
+        measurements are time-discrete.  The variable name convention is:
 
         x: 6x1 matrix, state vector with components [s, b], where s is the MRP
             parameter set and b are the gyroscope biases.
@@ -351,7 +351,7 @@ class MRPEKF(object):
             y,
             MRPEKF.shadow_update_check(
                 y,
-                s_obs - MRPEKF.H[:, :3] @ MRP.shadow(s_post)
+                s_obs - MRPEKF.H[:, :3] @ shadow(s_post)
             )
         )
 
@@ -387,7 +387,7 @@ class MRPEKF(object):
             jnp.ndarray: 6x1 matrix, state vector with MRP shadow set.
         """
         return jnp.vstack(
-            [MRP.shadow(x[:3, :]),
+            [shadow(x[:3, :]),
              jnp.zeros((3, 1))]
         )
 

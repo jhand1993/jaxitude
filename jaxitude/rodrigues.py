@@ -7,6 +7,19 @@ from jax import jit
 from jaxitude.base import Primitive
 
 
+@jit
+def shadow(s: jnp.array) -> jnp.array:
+    """ Calculates shadow set from 3x1 matrix of MRP s values.
+
+    Args:
+        s (jnp.array): 3x1 matrix, MRP s set.
+
+    Returns:
+        jnp.array: 3x1 matrix, shadow set of MRP s set.
+    """
+    return -s / jnp.vdot(s, s)
+
+
 class CRP(Primitive):
     """ Classical Rodrigues parameter rotation class.
     """
@@ -130,18 +143,5 @@ class MRP(Primitive):
         Returns:
             CRP: new instance shadow MRP.
         """
-        s_shadow = MRP.shadow(self.s)
+        s_shadow = shadow(self.s)
         return self.__class__(s_shadow)
-
-    @staticmethod
-    @jit
-    def shadow(s: jnp.array) -> jnp.array:
-        """ Calculates shadow set from 3x1 matrix of MRP s values.
-
-        Args:
-            s (jnp.array): 3x1 matrix, MRP s set.
-
-        Returns:
-            jnp.array: 3x1 matrix, shadow set of MRP s set.
-        """
-        return -s / jnp.vdot(s, s)
