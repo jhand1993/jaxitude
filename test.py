@@ -16,7 +16,7 @@ from jaxitude.determination.olae import olae_get_CRPq
 from jaxitude.operations import evolution as ev
 from jaxitude.operations.linearization import linearize
 from jaxitude.operations.integrator import autonomous_euler, autonomous_rk4
-from jaxitude.operations.noise import HeadingNoise, QuatNoise
+from jaxitude.operations.error import HeadingNoise, QuatNoise
 
 # Double precision needed for testing.
 config.update("jax_enable_x64", True)

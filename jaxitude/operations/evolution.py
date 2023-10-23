@@ -5,9 +5,63 @@
     integrators and filters.
 """
 import jax.numpy as jnp
-# from jax import jit
+from jax import jit
 
 from jaxitude.base import cpo
+from jaxitude.operations.composition import compose_quat
+
+
+@jit
+def B_crp(q: jnp.ndarray) -> jnp.ndarray:
+    """ Calculates B matrix relating q and w to dq/dt.
+
+    Args:
+        q (jnp.ndarray): 3x1 matrix, CRP q parameters.
+
+    Returns:
+        jnp.ndarray: B matrix for q.
+    """
+    return jnp.array(
+        [[1. + q[0, 0]**2., q[0, 0] * q[1, 0] - q[2, 0], q[0, 0] * q[2, 0] + q[1, 0]],
+         [q[0, 0] * q[1, 0] + q[2, 0], 1. + q[1, 0]**2., q[1, 0] * q[2, 0] - q[0, 0]],
+         [q[0, 0] * q[2, 0] - q[1, 0], q[1, 0] * q[2, 0] + q[0, 0], 1. + q[2, 0]**2.]]
+    )
+
+
+@jit
+def B_mrp(s: jnp.ndarray) -> jnp.ndarray:
+    """ Calculates B matrix relating s and w to ds/dt.
+
+    Args:
+        q (jnp.ndarray): 3x1 matrix, MRP s parameters.
+
+    Returns:
+        jnp.ndarray: B matrix for s.
+    """
+    s2 = jnp.vdot(s, s)
+    return jnp.array(
+        [[1. - s2 + 2. * s[0, 0]**2., 2. * (s[0, 0] * s[1, 0] - s[2, 0]), 2. * (s[0, 0] * s[2, 0] + s[1, 0])],
+         [2. * (s[0, 0] * s[1, 0] + s[2, 0]), 1. - s2 + 2. * s[1, 0]**2., 2. * (s[1, 0] * s[2, 0] - s[0, 0])],
+         [2. * (s[0, 0] * s[2, 0] - s[1, 0]), 2. * (s[1, 0] * s[2, 0] + s[0, 0]), 1. - s2 + 2. * s[2, 0]**2.]]
+    )
+
+
+@jit
+def inv_B_mrp(s: jnp.ndarray) -> jnp.ndarray:
+    """ Calculates inverse B matrix relating s and ds/dt to w.
+
+    Args:
+        q (jnp.ndarray): 3x1 matrix, MRP s parameters.
+
+    Returns:
+        jnp.ndarray: inverse B matrix for s.
+    """
+    s2 = jnp.vdot(s, s)
+    return jnp.array(
+        [[1. - s2 + 2. * s[0, 0]**2., 2. * (s[0, 0] * s[1, 0] + s[2, 0]), 2. * (s[0, 0] * s[2, 0] - s[1, 0])],
+         [2. * (s[0, 0] * s[1, 0] - s[2, 0]), 1. - s2 + 2. * s[1, 0]**2., 2. * (s[1, 0] * s[2, 0] + s[0, 0])],
+         [2. * (s[0, 0] * s[2, 0] + s[1, 0]), 2. * (s[1, 0] * s[2, 0] - s[0, 0]), 1. - s2 + 2. * s[2, 0]**2.]]
+    ) / (1. + s2)**2.
 
 
 def evolve_CRP(
@@ -23,12 +77,7 @@ def evolve_CRP(
     Returns:
         jnp.ndarray: 3x1 matrix, dq/dt at time t.
     """
-    m = jnp.array(
-        [[1. + q[0, 0]**2., q[0, 0] * q[1, 0] - q[2, 0], q[0, 0] * q[2, 0] + q[1, 0]],
-         [q[0, 0] * q[1, 0] + q[2, 0], 1. + q[1, 0]**2., q[1, 0] * q[2, 0] - q[0, 0]],
-         [q[0, 0] * q[2, 0] - q[1, 0], q[1, 0] * q[2, 0] + q[0, 0], 1. + q[2, 0]**2.]]
-    ) * 0.5
-    return jnp.dot(m, w)
+    return jnp.dot(0.5 * B_crp(q), w)
 
 
 def evolve_MRP(
@@ -44,13 +93,7 @@ def evolve_MRP(
     Returns:
         jnp.ndarray: 3x1 matrix, ds/dt at time t.
     """
-    s2 = jnp.vdot(s, s)
-    m = jnp.array(
-        [[1. - s2 + 2. * s[0, 0]**2., 2. * (s[0, 0] * s[1, 0] - s[2, 0]), 2. * (s[0, 0] * s[2, 0] + s[1, 0])],
-         [2. * (s[0, 0] * s[1, 0] + s[2, 0]), 1. - s2 + 2. * s[1, 0]**2., 2. * (s[1, 0] * s[2, 0] - s[0, 0])],
-         [2. * (s[0, 0] * s[2, 0] - s[1, 0]), 2. * (s[1, 0] * s[2, 0] + s[0, 0]), 1. - s2 + 2. * s[2, 0]**2.]]
-    ) * 0.25
-    return jnp.dot(m, w)
+    return jnp.dot(0.25 * B_mrp(s), w)
 
 
 def evolve_MRP_Pmatrix(
@@ -73,7 +116,8 @@ def evolve_MRP_Pmatrix(
     Returns:
         jnp.ndarray: 6x6 matrix, rates for P matrix.
     """
-    return F @ P + P @ F.T + G @ Lambda @ G.T + Q
+    return F @ P + P @ F.T + Q
+    # return F @ P + P @ F.T + G @ Lambda @ G.T + Q
 
 
 def evolve_w_from_MRP(
@@ -89,13 +133,7 @@ def evolve_w_from_MRP(
     Returns:
         jnp.ndarray: 3x1 matrix, body angular rotation rates.
     """
-    s2 = jnp.vdot(s, s)
-    m = jnp.array(
-        [[1. - s2 + 2. * s[0, 0]**2., 2. * (s[0, 0] * s[1, 0] + s[2, 0]), 2. * (s[0, 0] * s[2, 0] - s[1, 0])],
-         [2. * (s[0, 0] * s[1, 0] - s[2, 0]), 1. - s2 + 2. * s[1, 0]**2., 2. * (s[1, 0] * s[2, 0] + s[0, 0])],
-         [2. * (s[0, 0] * s[2, 0] + s[1, 0]), 2. * (s[1, 0] * s[2, 0] - s[0, 0]), 1. - s2 + 2. * s[2, 0]**2.]]
-    ) * 4. / (1. + s2)**2.
-    return jnp.dot(m, s_dot)
+    return jnp.dot(4. * inv_B_mrp(s), s_dot)
 
 
 def evolve_MRP_shadow(
@@ -113,11 +151,10 @@ def evolve_MRP_shadow(
         jnp.ndarray: 3x1 matrix, ds/dt for MRP shadow set at time t
     """
     s2 = jnp.vdot(s, s)
-    in_shape = s.shape
     s_dot = evolve_MRP(w, s)
     return -s_dot / s2 + 0.5 * (1. + s2) / s2**2 * jnp.matmul(
         s @ s.T, w
-    ).reshape(in_shape)
+    )
 
 
 def evolve_quat(
@@ -127,29 +164,16 @@ def evolve_quat(
     """ Returns db/dt given b(t) and w(t).
 
     Args:
-        b (jnp.ndarray): 4x1 matrix, Quaternion b parameters.
-        w (jnp.ndarray): 3x1 matrix, Body angular rotation rates.
+        b (jnp.ndarray): 4x1 matrix, quaternion b parameters.
+        w (jnp.ndarray): 3x1 matrix, body angular rotation rates.
 
     Returns:
         jnp.ndarray: 4x1 matrix, db/dt at time t.
     """
     # Append zero to w rate vector
     zero = jnp.zeros((1, 1))
-    w4 = jnp.hstack([zero, w])
-
-    row1 = jnp.array([b[0, 0], -b[1, 0], -b[2, 0], -b[3, 0]])
-    row2 = jnp.array([b[1, 0], b[0, 0], -b[3, 0], b[2, 0]])
-    row3 = jnp.array([b[2, 0], b[3, 0], b[0, 0], -b[1, 0]])
-    row4 = jnp.array([b[3, 0], -b[2, 0], b[1, 0], b[0, 0]])
-
-    # |b|^2=1 at all times, so enforcing orthonormality is important.
-    m = jnp.vstack(
-        [row1 / jnp.linalg.norm(row1),
-         row2 / jnp.linalg.norm(row2),
-         row3 / jnp.linalg.norm(row3),
-         row4 / jnp.linalg.norm(row4)]
-    ) * 0.5
-    return jnp.dot(m, w4)
+    w_4 = jnp.vstack([zero, w])
+    return compose_quat(b, 0.5 * w_4)
 
 
 def euler_eqs(

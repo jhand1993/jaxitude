@@ -40,25 +40,25 @@ class MRPEKF(object):
     @staticmethod
     def filter_step(
         x_prior: jnp.ndarray,
-        eta_prior: jnp.ndarray,
         P_prior: jnp.ndarray,
         w_obs: jnp.ndarray,
         s_obs: jnp.ndarray,
+        # eta: jnp.ndarray,
         R_w: jnp.ndarray,
         R_s: jnp.ndarray,
         Q: jnp.ndarray,
         dt: float,
-        P_propogation_method: str = 'stm'
+        P_propogation_method: str = 'ricatti'
     ) -> Tuple[jnp.ndarray]:
         """ A single EKF timestep
 
         Args:
             x_prior (jnp.ndarray): 6x1 matrix, prior state vector estimate.
-            eta_prior (jnp.ndarray): 6x1 matrix, prior noise vector estimate.
             P_prior (jnp.ndarray): 6x6 matrix, prior state covariance estimate.
             w_obs (jnp.ndarray): 3x1 matrix, observed attitude rate vector.
             s_obs (jnp.ndarray): 3x1 matrix, observed attitude, represented with
                 MRP set s.
+            eta (jnp.ndarray): 6x1 matrix, noise parameter vector.
             R_w (jnp.ndarray): 3x3 matrix, attitude vector w covariance.
             R_s (jnp.ndarray): 3x3 matrix, MRP s set covariance.
             Q (jnp.ndarray): 6x6 matrix, process noise covariance for attitude
@@ -83,10 +83,9 @@ class MRPEKF(object):
         F_prior = MRPEKF.tangent_f(x_prior, w_obs)
         G_prior = MRPEKF.tangent_g(x_prior)
 
-        # Get posterior predictions for state vector, noise vector, and
-        # covariance matrix.
+        # Get posterior predictions for state vector and state covariance
+        # matrix.
         x_post = MRPEKF.pred_x(x_prior, w_obs, dt)
-        eta_post = MRPEKF.pred_eta(x_prior, eta_prior, dt)
         P_post = P_prop(P_prior, F_prior, G_prior, R_w, Q, dt)
 
         # First shadow set check.
@@ -103,7 +102,7 @@ class MRPEKF(object):
         x_new = x_post + K @ y
         P_new = (jnp.eye(6) - K @ MRPEKF.H) @ P_post
 
-        return x_new, eta_post, P_new
+        return x_new, P_new
 
     @staticmethod
     def f(
@@ -141,7 +140,8 @@ class MRPEKF(object):
                 components are MRP values, second three are gyro bias
                 measurements.
             eta (jnp.ndarray): 6x1 matrix, noise vectors. First three
-                components are MRP noise, second three are gyro bias noise.
+                components are attitude rate noise, second three are gyro bias
+                noise.
 
         Returns:
             jnp.ndarray: Noise component of state rate vector matrix
@@ -160,7 +160,7 @@ class MRPEKF(object):
         w_obs: jnp.ndarray,
     ) -> jnp.ndarray:
         """ Gets the linearized kinematics equation matrix at x=x_ref:
-            F ~ Jac(f(x, w=w_obs))(x_ref).
+            F = Jac(f(x, w=w_obs))(x_ref).
 
         Args:
             x_ref (jnp.ndarray): 6x1 matrix, state vector estimate to linearize
@@ -181,7 +181,7 @@ class MRPEKF(object):
         x_ref: jnp.ndarray,
     ) -> Callable:
         """ Gets the linearized kinematics equation matrix at eta=0:
-            G ~ Jac(g(x=x_ref, eta))(eta=0).
+            G = Jac(g(x=x_ref, eta))(eta=0).
 
         Args:
             x_ref (jnp.ndarray): 6x1 matrix, state vector to linearize at.
@@ -217,31 +217,6 @@ class MRPEKF(object):
             x_prior,
             dt,
             w_obs
-        )
-
-    @staticmethod
-    def pred_eta(
-        x_prior: jnp.ndarray,
-        eta_prior: jnp.ndarray,
-        dt: float,
-    ) -> jnp.ndarray:
-        """ Predicts new state vector eta_post from eta_prior and w_obs along
-            time interval dt.
-
-        Args:
-            x_prior (jnp.ndarray): 6x1 matrix, prior state vector estimate.
-            eta_prior (jnp.ndarray): 6x1 matrix, prior state error vector
-                estimate.
-            dt (float): Integration time interval.
-
-        Returns:
-            jnp.ndarray: Posterior state error vector estimate.
-        """
-        return autonomous_euler(
-            MRPEKF.g,
-            x_prior,
-            dt,
-            eta_prior
         )
 
     @staticmethod
@@ -347,7 +322,7 @@ class MRPEKF(object):
         y = s_obs - MRPEKF.H[:, :3] @ s_post
 
         return jnp.where(
-            jnp.linalg.norm(y) < 0.333,
+            jnp.linalg.norm(y) < 0.33333,
             y,
             MRPEKF.shadow_update_check(
                 y,
@@ -371,7 +346,7 @@ class MRPEKF(object):
                 error back to state space.
         """
         return P_post @ MRPEKF.H.T @ jnp.linalg.inv(
-            MRPEKF.H @ P_post @ MRPEKF.H.T - R_s
+            MRPEKF.H @ P_post @ MRPEKF.H.T + R_s
         )
 
     @staticmethod
@@ -388,7 +363,7 @@ class MRPEKF(object):
         """
         return jnp.vstack(
             [shadow(x[:3, :]),
-             jnp.zeros((3, 1))]
+             x[3:, :]]
         )
 
     @staticmethod
