@@ -77,7 +77,7 @@ w = jnp.array(
 )
 ```
 
-Why requires this?
+Why require this?
 For starters, it forces the user to write code that represents mathematical vectors more accurately.
 For JAXitude, it also provides an API that lends naturally better representing the underlying mathematics of vector algebra, calculus, and dynamical systems.
 It also ostensibly helps with source code readibility.
@@ -290,7 +290,6 @@ from jax import jit
 
 from jaxitude.operations.evolution import evolve_quat
 
-
 # Jitted wrapper function to yield dbdt at time t.
 # Note that the first argument for differential equations should be the time argument in JAXitude.
 @jit
@@ -333,7 +332,12 @@ for t in t_arr:
     b = rk4(
         dbdt,
         t,
-        b
+        b,
+        dt
     )
+
+b_arr = jnp.array(b_list)
 ```
 
+Similar attitude rate differential equations exist for $\dot{q}$ (`evolution.evolve_crp()`) and $\dot{\sigma}$ (`evolution.evolve_mrp()`). 
+Currently, JAXitude does not implement differential equations relating $\mathbf{\omega}$ to Euler angle rates ($\dot{\alpha}$, $\dot{\beta}$, $\dot{\gamma}$).
