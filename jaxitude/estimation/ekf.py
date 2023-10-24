@@ -43,7 +43,6 @@ class MRPEKF(object):
         P_prior: jnp.ndarray,
         w_obs: jnp.ndarray,
         s_obs: jnp.ndarray,
-        # eta: jnp.ndarray,
         R_w: jnp.ndarray,
         R_s: jnp.ndarray,
         Q: jnp.ndarray,
@@ -58,7 +57,6 @@ class MRPEKF(object):
             w_obs (jnp.ndarray): 3x1 matrix, observed attitude rate vector.
             s_obs (jnp.ndarray): 3x1 matrix, observed attitude, represented with
                 MRP set s.
-            eta (jnp.ndarray): 6x1 matrix, noise parameter vector.
             R_w (jnp.ndarray): 3x3 matrix, attitude vector w covariance.
             R_s (jnp.ndarray): 3x3 matrix, MRP s set covariance.
             Q (jnp.ndarray): 6x6 matrix, process noise covariance for attitude
@@ -266,8 +264,9 @@ class MRPEKF(object):
         Q: jnp.ndarray,
         dt: float
     ) -> jnp.ndarray:
-        """ Predict P_post from x_prior and covariance structures using Ricatti
-            equation integrated with Euler's method.
+        """ Predict P_post from x_prior and covariance structures using the
+            the state transition matrix, as calculated from the linearized
+            dynamics around the current state estimate.
 
         Args:
             P_prior (jnp.ndarray): 6x6 matrix, prior P estimate.
@@ -338,7 +337,7 @@ class MRPEKF(object):
         """ Calculate the Kalman gain matrix K.
 
         Args:
-            P_post (jnp.ndarray): 6x6 matrix, predicted processes covariance.
+            P_post (jnp.ndarray): 6x6 matrix, predicted state covariance.
             R_s (jnp.ndarray): 3x3 matrix, observed MRP s covariance.
 
         Returns:
