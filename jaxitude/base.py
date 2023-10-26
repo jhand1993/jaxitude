@@ -14,65 +14,65 @@ from jax.lax import switch
 
 # This maps Euler type to angles, given a rotation matrix R.
 eulerangle_map = {
-    '131': lambda R: (
-        jnp.arctan2(R[0, 2], R[0, 1]),
-        jnp.arccos(R[0, 0]),
-        jnp.arctan2(R[2, 0], -R[1, 0])
+    '131': lambda R: jnp.array(
+        [[jnp.arctan2(R[0, 2], R[0, 1])],
+         [jnp.arccos(R[0, 0])],
+         [jnp.arctan2(R[2, 0], -R[1, 0])]]
     ),
-    '121': lambda R: (
-        jnp.arctan2(R[0, 1], -R[0, 2]),
-        jnp.arccos(R[0, 0]),
-        jnp.arctan2(R[1, 0], R[2, 0])
+    '121': lambda R: jnp.array(
+        [[jnp.arctan2(R[0, 1], -R[0, 2])],
+         [jnp.arccos(R[0, 0])],
+         [jnp.arctan2(R[1, 0], R[2, 0])]]
     ),
-    '212': lambda R: (
-        jnp.arctan2(R[1, 0], R[1, 2]),
-        jnp.arccos(R[1, 1]),
-        jnp.arctan2(R[0, 1], -R[2, 1])
+    '212': lambda R: jnp.array(
+        [[jnp.arctan2(R[1, 0], R[1, 2])],
+         [jnp.arccos(R[1, 1])],
+         [jnp.arctan2(R[0, 1], -R[2, 1])]]
     ),
-    '232': lambda R: (
-        jnp.arctan2(R[1, 2], -R[1, 0]),
-        jnp.arccos(R[1, 1]),
-        jnp.arctan2(R[2, 1], R[0, 1])
+    '232': lambda R: jnp.array(
+        [[jnp.arctan2(R[1, 2], -R[1, 0])],
+         [jnp.arccos(R[1, 1])],
+         [jnp.arctan2(R[2, 1], R[0, 1])]]
     ),
-    '323': lambda R: (
-        jnp.arctan2(R[2, 1], R[2, 0]),
-        jnp.arctan2(jnp.sqrt(1. - R[2, 2]**2), R[2, 2]),
-        jnp.arctan2(R[1, 2], -R[0, 2])
+    '323': lambda R: jnp.array(
+        [[jnp.arctan2(R[2, 1], R[2, 0])],
+         [jnp.arctan2(jnp.sqrt(1. - R[2, 2]**2), R[2, 2])],
+         [jnp.arctan2(R[1, 2], -R[0, 2])]]
     ),
-    '313': lambda R: (
-        jnp.arctan2(R[2, 0], -R[2, 1]),
-        jnp.arccos(R[2, 2]),
-        jnp.arctan2(R[0, 2], R[1, 2])
+    '313': lambda R: jnp.array(
+        [[jnp.arctan2(R[2, 0], -R[2, 1])],
+         [jnp.arccos(R[2, 2])],
+         [jnp.arctan2(R[0, 2], R[1, 2])]]
     ),
-    '132': lambda R: (
-        jnp.arctan2(R[2, 1], R[1, 1]),
-        jnp.arcsin(-R[0, 1]),
-        jnp.arctan2(R[0, 2], R[0, 0])
+    '132': lambda R: jnp.array(
+        [[jnp.arctan2(R[2, 1], R[1, 1])],
+         [jnp.arcsin(-R[0, 1])],
+         [jnp.arctan2(R[0, 2], R[0, 0])]]
     ),
-    '123': lambda R: (
-        jnp.arctan2(-R[1, 2], R[2, 2]),
-        jnp.arcsin(R[0, 2]),
-        jnp.arctan2(R[0, 1], R[0, 0])
+    '123': lambda R: jnp.array(
+        [[jnp.arctan2(-R[1, 2], R[2, 2])],
+         [jnp.arcsin(R[0, 2])],
+         [jnp.arctan2(R[0, 1], R[0, 0])]]
     ),
-    '213': lambda R: (
-        jnp.arctan2(R[0, 2], R[2, 2]),
-        jnp.arcsin(-R[1, 2]),
-        jnp.arctan2(R[1, 0], R[1, 1])
+    '213': lambda R: jnp.array(
+        [[jnp.arctan2(R[0, 2], R[2, 2])],
+         [jnp.arcsin(-R[1, 2])],
+         [jnp.arctan2(R[1, 0], R[1, 1])]]
     ),
-    '231': lambda R: (
-        jnp.arctan2(-R[0, 2], R[0, 0]),
-        jnp.arcsin(R[1, 0]),
-        jnp.arctan2(-R[1, 2], R[1, 1])
+    '231': lambda R: jnp.array(
+        [[jnp.arctan2(-R[0, 2], R[0, 0])],
+         [jnp.arcsin(R[1, 0])],
+         [jnp.arctan2(-R[1, 2], R[1, 1])]]
     ),
-    '321': lambda R: (
-        jnp.arctan2(R[0, 1], R[0, 0]),
-        jnp.arcsin(-R[0, 2]),
-        jnp.arctan2(R[1, 2], R[2, 2])
+    '321': lambda R: jnp.array(
+        [[jnp.arctan2(R[0, 1], R[0, 0])],
+         [jnp.arcsin(-R[0, 2])],
+         [jnp.arctan2(R[1, 2], R[2, 2])]]
     ),
-    '312': lambda R: (
-        jnp.arctan2(-R[0, 1], R[1, 1]),
-        jnp.arcsin(R[2, 1]),
-        jnp.arctan2(-R[2, 0], R[2, 2])
+    '312': lambda R: jnp.array(
+        [[jnp.arctan2(-R[0, 1], R[1, 1])],
+         [jnp.arcsin(R[2, 1])],
+         [jnp.arctan2(-R[2, 0], R[2, 2])]]
     )
 }
 
@@ -184,8 +184,165 @@ def find_DCM(
     z_op = cpo(z)
     return jnp.eye(3) + z_op + z_op @ z_op * (1. - c) / s2
 
+# Container classes of jitted static methods for determining various rotation
+# representations from DCM matrix directly.
 
-class PRVUtil(object):
+
+class QuatDCM():
+    """ Container class for b determination from DCM.
+    """
+    @staticmethod
+    @jit
+    def b_base(dcm: jnp.ndarray) -> jnp.ndarray:
+        """ Returns a matrix of quaternion parameters from dcm. Uses Shepard's
+            method to avoid singularity at b0=0.  Doesn't decide shortest path.
+
+        Args:
+            dcm (jnp.ndarray): 3x3 matrix, DCM matrix.
+
+        Returns:
+            jnp.ndarray: 4x1 matrix, quaternion parameters.
+        """
+        tr = jnp.trace(dcm)
+        step1 = jnp.array(
+            [
+                0.25 * (1. + tr),
+                0.25 * (1. + 2. * dcm[0, 0] - tr),
+                0.25 * (1. + 2. * dcm[1, 1] - tr),
+                0.25 * (1. + 2. * dcm[2, 2] - tr)
+            ]
+        )
+
+        # Important: to jit, you need to cast using jnp.ndarray.astype.
+        max_i = jnp.argmax(step1)
+        step2 = jnp.array(
+            [
+                0.25 * (dcm[1, 2] - dcm[2, 1]),
+                0.25 * (dcm[2, 0] - dcm[0, 2]),
+                0.25 * (dcm[0, 1] - dcm[1, 0]),
+                0.25 * (dcm[1, 2] + dcm[2, 1]),
+                0.25 * (dcm[2, 0] + dcm[0, 2]),
+                0.25 * (dcm[0, 1] + dcm[1, 0])
+            ]
+        )
+        max_sq = jnp.sqrt(step1[max_i])
+
+        choices = (
+            lambda *args: jnp.array(
+                [[max_sq],
+                 [step2[0] / max_sq],
+                 [step2[1] / max_sq],
+                 [step2[2] / max_sq]]
+            ),
+            lambda *args: jnp.array(
+                [[step2[0] / max_sq],
+                 [max_sq],
+                 [step2[5] / max_sq],
+                 [step2[4] / max_sq]]
+            ),
+            lambda *args: jnp.array(
+                [[step2[1] / max_sq],
+                 [step2[5] / max_sq],
+                 [max_sq],
+                 [step2[3] / max_sq]]
+            ),
+            lambda *args: jnp.array(
+                [[step2[2] / max_sq],
+                 [step2[4] / max_sq],
+                 [step2[3] / max_sq],
+                 [max_sq]]
+            )
+        )
+
+        # Using switch with a tuple of callable functions allows for jit and
+        # vmap calls.
+        return switch(max_i, choices)
+
+    @staticmethod
+    @jit
+    def b_primary(dcm: jnp.ndarray) -> jnp.ndarray:
+        """ Shepard's method to get b from DCM.
+
+        Args:
+            dcm (jnp.ndarray): 3x3 matrix, DCM matrix.
+
+        Returns:
+            jnp.ndarray: 4x1 matrix, quaternion parameters.
+        """
+        return QuatDCM.b_base(dcm)
+
+    @staticmethod
+    @jit
+    def b_short(dcm: jnp.ndarray) -> jnp.ndarray:
+        """ Shepard's method to get b from DCM which always returns the smallest
+            principle angle.
+
+        Args:
+            dcm (jnp.ndarray): 3x3 matrix, DCM matrix.
+
+        Returns:
+            jnp.ndarray: 4x1 matrix, quaternion parameters.
+        """
+        b = QuatDCM.b_primary(dcm)
+        return jnp.where(
+            2. * jnp.arccos(b[0, 0]) < jnp.pi,
+            b,
+            -b
+        )
+
+    @staticmethod
+    @jit
+    def b_long(dcm: jnp.ndarray) -> jnp.ndarray:
+        """ Shepard's method to get b from DCM which always returns the largest
+            principle angle.
+
+        Args:
+            dcm (jnp.ndarray): 3x3 matrix, DCM matrix.
+
+        Returns:
+            jnp.ndarray: 4x1 matrix, quaternion parameters.
+        """
+        b = QuatDCM.b_primary(dcm)
+        return jnp.where(
+            2. * jnp.arccos(b[0, 0]) < jnp.pi,
+            -b,
+            b
+        )
+
+
+class RodDCM():
+    """ Container class for Rodrigues parameter determination from DCM
+    """
+    @staticmethod
+    @jit
+    def q(dcm: jnp.ndarray) -> jnp.ndarray:
+        """ Gets CRP q parameters from DCM.
+
+        Args:
+            dcm (jnp.ndarray): 3x3 matrix, DCM matrix.
+
+        Returns:
+            jnp.ndarray: 3x1 matrix, CRP q parameters.
+        """
+        zeta_squared = jnp.trace(dcm) + 1.
+        return antisym_dcm_vector(dcm) / zeta_squared
+
+    @staticmethod
+    @jit
+    def s(dcm: jnp.ndarray) -> jnp.ndarray:
+        """ Gets MRP s parameters from DCM.
+
+        Args:
+            dcm (jnp.ndarray): 3x3 matrix, DCM matrix.
+
+        Returns:
+            jnp.ndarray: 3x1 matrix, MRP s parameters.
+        """
+        zeta = jnp.sqrt(jnp.trace(dcm) + 1.)
+        return antisym_dcm_vector(dcm) / zeta / (zeta + 2.)
+
+
+class PRVDCM():
     """ Container class for PRV calculations from dcm.
     """
     @staticmethod
@@ -199,7 +356,7 @@ class PRVUtil(object):
         Returns:
             jnp.ndarray: 3xz array representation of e
         """
-        phi = PRVUtil.get_phi(dcm)
+        phi = PRVDCM.get_phi(dcm)
         e_raw = antisym_dcm_vector(dcm) * 0.5 / jnp.sin(phi)
         return e_raw / jnp.linalg.norm(e_raw)
 
@@ -250,7 +407,7 @@ class Primitive(object):
         Returns:
             Tuple: phi, vec(e)
         """
-        return PRVUtil.get_phi(self.dcm), PRVUtil.get_e(self.dcm)
+        return PRVDCM.get_phi(self.dcm), PRVDCM.get_e(self.dcm)
 
     def get_PRV2(self) -> Tuple:
         """ Returns principle angle phi and principle vector e from
@@ -259,7 +416,7 @@ class Primitive(object):
         Returns:
             Tuple: phi, vec(e)
         """
-        return PRVUtil.get_phi(self.dcm) - 2. * jnp.pi, PRVUtil.get_e(self.dcm)
+        return PRVDCM.get_phi(self.dcm) - 2. * jnp.pi, PRVDCM.get_e(self.dcm)
 
     def get_eulerangles(
         self, ea_type: str
@@ -274,101 +431,39 @@ class Primitive(object):
         """
         return jnp.asarray(eulerangle_map[ea_type](self.dcm))
 
-    # @partial(jit, static_argnums=0)
-    def _get_b_base(self) -> jnp.ndarray:
-        """ Returns a matrix of quaternion parameters from dcm. Uses Shepard's
-            method to avoid singularity at b0=0.  Doesn't decide shortest path.
+    def get_b_short(self) -> jnp.ndarray:
+        """ Shepard's method to get b from DCM which always returns the smallest
+            principle angle.
 
         Returns:
             jnp.ndarray: 4x1 matrix, quaternion parameters.
         """
-        tr = jnp.trace(self.dcm)
-        step1 = jnp.array(
-            [
-                0.25 * (1. + tr),
-                0.25 * (1. + 2. * self.dcm[0, 0] - tr),
-                0.25 * (1. + 2. * self.dcm[1, 1] - tr),
-                0.25 * (1. + 2. * self.dcm[2, 2] - tr)
-            ]
-        )
-
-        # Important: to jit, you need to cast using jnp.ndarray.astype.
-        max_i = jnp.argmax(step1)
-        step2 = jnp.array(
-            [
-                0.25 * (self.dcm[1, 2] - self.dcm[2, 1]),
-                0.25 * (self.dcm[2, 0] - self.dcm[0, 2]),
-                0.25 * (self.dcm[0, 1] - self.dcm[1, 0]),
-                0.25 * (self.dcm[1, 2] + self.dcm[2, 1]),
-                0.25 * (self.dcm[2, 0] + self.dcm[0, 2]),
-                0.25 * (self.dcm[1, 2] + self.dcm[2, 1]),
-            ]
-        )
-        max_sq = jnp.sqrt(step1[max_i])
-        choices = (
-            lambda *args: jnp.array(
-                [[max_sq],
-                 [step2[0] / max_sq],
-                 [step2[1] / max_sq],
-                 [step2[2] / max_sq]]
-            ),
-            lambda *args: jnp.array(
-                [[step2[0] / max_sq],
-                 [max_sq],
-                 [step2[5] / max_sq],
-                 [step2[4] / max_sq]]
-            ),
-            lambda *args: jnp.array(
-                [[step2[1] / max_sq],
-                 [step2[5] / max_sq],
-                 [max_sq],
-                 [step2[3] / max_sq]]
-            ),
-            lambda *args: jnp.array(
-                [[step2[2] / max_sq],
-                 [step2[4] / max_sq],
-                 [step2[5] / max_sq],
-                 [max_sq]]
-            )
-        )
-        return switch(max_i, choices)
-
-    def get_b_short(self) -> jnp.ndarray:
-        """ Shepard's method to get b from DCM. Makes sure b0 is positive.
-
-        Returns:
-            jnp.ndarray: 4x1 matrix of quaternion parameters.
-        """
-        b = self._get_b_base()
-        return b
-        # return b.at[1:, 0].set(jnp.abs(b[1:, 0]))
+        return QuatDCM.b_short(self.dcm)
 
     def get_b_long(self) -> jnp.ndarray:
-        """ Shepard's method to get b from DCM. Makes sure b0 is negative.
+        """ Shepard's method to get b from DCM which always returns the largest
+            principle angle.
 
         Returns:
-            jnp.ndarray: 4x1 matrix of quaternion parameters.
+            jnp.ndarray: 4x1 matrix, quaternion parameters.
         """
-        b = self._get_b_base()
-        return b.at[1:, 0].set(-jnp.abs(b[1:, 0]))
+        return QuatDCM.b_long(self.dcm)
 
     def get_q(self) -> jnp.ndarray:
         """ Gets CRP q parameters from DCM.
 
         Returns:
-            jnp.ndarray: 3xz matrix of CRP q parameters.
+            jnp.ndarray: 3x1 matrix, CRP q parameters.
         """
-        zeta_squared = jnp.trace(self.dcm) + 1.
-        return antisym_dcm_vector(self.dcm) / zeta_squared
+        return RodDCM.q(self.dcm)
 
     def get_s(self) -> jnp.ndarray:
         """ Gets MRP s parameters from DCM.
 
         Returns:
-            jnp.ndarray: 3xz matrix of MRP s parameters.
+            jnp.ndarray: 3x1 matrix, MRP s parameters.
         """
-        zeta = jnp.sqrt(jnp.trace(self.dcm) + 1.)
-        return antisym_dcm_vector(self.dcm) / zeta / (zeta + 2.)
+        return RodDCM.s(self.dcm)
 
 
 class BaseR(Primitive):

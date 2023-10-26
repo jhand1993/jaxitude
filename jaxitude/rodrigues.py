@@ -46,7 +46,7 @@ class CRP(Primitive):
              [2. * (q[0, 0] * q[2, 0] + q[1, 0]), 2. * (q[1, 0] * q[2, 0] - q[0, 0]), 1. - q[0, 0]**2. - q[1, 0]**2. + q[2, 0]**2.]]
         ) / c
 
-    def get_quat_from_q(self) -> jnp.ndarray:
+    def get_b_from_q(self) -> jnp.ndarray:
         """ Builds Euler parameters from CRP q.
 
         Returns:

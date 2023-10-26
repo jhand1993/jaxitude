@@ -1,5 +1,16 @@
-""" Extended Kalman filter algorithms for quaternion sets b and MRP sets s.
-    See https://link.springer.com/article/10.1007/BF03321529 for EKF MRP,
+""" Extended Kalman filter algorithms for quaternions b and MRPs s.
+    See https://link.springer.com/article/10.1007/BF03321529 for MRP EKF
+    algorithm, and https://matthewhampsey.github.io/blog/2020/07/18/mekf for
+    an example Multiplicative EKF example (your blog is dope, Matthew).
+
+    Note for the curious: these classes try to break down a single filter step
+    into individual calculatable parts, with the resulting modularity being
+    used to 'easily' build up the filter step calculations. This is on purpose,
+    since it improves code readibility.
+
+    Each class of EKF algorithms here uses its own Kalman gain matrix K
+    calculator, since the shape and components are dependent upon the shape and
+    properties the state space itself.
 
 """
 from typing import Callable, Tuple
@@ -21,11 +32,9 @@ class MRPEKF(object):
         noise evolution.  The underlying process is time-continuous and
         measurements are time-discrete.  The variable name convention is:
 
-        x: 6x1 matrix, state vector with components [s, b], where s is the MRP
-            parameter set and b are the gyroscope biases.
-        eta: 6x1 matrix, state noise vector with components [eta_w, eta_b].
-            Attitude rate measurement errors are tracked, not MRP rate errors.
-        P: 6x6 matrix, state (process) covariance matrix.
+        x: 6x1 matrix, state vector with components [s, bias], where s is the
+            MRP set and bias are the gyroscope biases.
+        P: 6x6 matrix, state (process) covariance matrix estimate.
         w_obs: 3x1 matrix, observed attitude rates.
         s_obs: 3x1 matrix, observed MRP s set.
         R_w: 3x3 matrix, attitude rate measurement covariance.
@@ -434,3 +443,32 @@ class MRPEKF(object):
             y,
             y_shadow
         )
+
+
+class MEKF():
+    """ Container class for Multiplicative extended kalman filter (MEKF)
+        calculations.
+
+        The dynamics model here is assumed be dxdt = f(x|w) + g(x,eta), with
+        f(x|w) describing the system's kinematics and g(x,eta) describing the
+        noise evolution.  The underlying process is time-continuous and
+        measurements are time-discrete.
+
+        Because unit quaternions represent rotations, care needs to be taken
+        when predicting quaternion values from observation and past estimates.
+        MEKF does this by tracking an error quaternion dq = [1, a/2].T, where
+        a is a 3-vector with compoents much less than one (small angle
+        approximation for the win). At each filter step we 
+        
+        The variable name convention is:
+
+        x: 6x1 matrix, state vector with components [a, bias], where a is the
+            error quaternion set and bias are the gyroscope biases.
+        P: 6x6 matrix, state covariance matrix estimate.
+        w_obs: 3x1 matrix, observed attitude rates.
+        q_obs: 4x1 matrix, observed quaternion set.
+        R_w: 3x3 matrix, attitude rate measurement covariance.
+        R_q: 4x4 matrix, MRP measurement covariance.
+        Q: 6x6 matrix, (process) noise covariance.
+        dt: time interval of filter step.
+    """
