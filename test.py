@@ -182,9 +182,9 @@ class TestQuaternions(unittest.TestCase):
         test_b = test.get_b_short()
         target_b = jnp.array(
             [[0.002425426384434104],
-             [0.4850696623325348],
              [-0.4850696623325348],
-             [0.7276048064231873]]
+             [0.4850696623325348],
+             [-0.7276048064231873]]
         )
         for i in range(4):
             self.assertAlmostEqual(
