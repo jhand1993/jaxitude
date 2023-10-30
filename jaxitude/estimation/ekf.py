@@ -13,10 +13,10 @@
     properties the state space itself.
 
 """
-from typing import Callable, Tuple
+from typing import Tuple
 
 import jax.numpy as jnp
-from jax.scipy.linalg import expm, block_diag
+from jax.scipy.linalg import expm
 
 from jaxitude.rodrigues import shadow
 from jaxitude.operations import evolution as ev
@@ -56,9 +56,10 @@ class MRPEKF(object):
         R_s: jnp.ndarray,
         Q: jnp.ndarray,
         dt: float,
+        H: jnp.ndarray,
         P_propogation_method: str = 'ricatti'
     ) -> Tuple[jnp.ndarray]:
-        """ A single EKF timestep
+        """ A single MRP EKF timestep
 
         Args:
             x_prior (jnp.ndarray): 6x1 matrix, prior state vector estimate.
@@ -71,6 +72,7 @@ class MRPEKF(object):
             Q (jnp.ndarray): 6x6 matrix, process noise covariance for attitude
                 rates and gyroscopic bias.
             dt (float): Integration time interval.
+            H (jnp.ndarray): 3x6 matrix, measurement model matrix.
             P_propogation_method (str): State covariance propogation method.
                 Either directely using the system transition matrix ('stm') or
                 via numerically integrating the Ricatti ODE ('ricatti').
@@ -107,7 +109,7 @@ class MRPEKF(object):
 
         # Update state vector and state covariance estimate with Kalman gain.
         x_new = x_post + K @ y
-        P_new = (jnp.eye(6) - K @ MRPEKF.H) @ P_post
+        P_new = (jnp.eye(6) - K @ H) @ P_post
 
         return x_new, P_new
 
@@ -175,7 +177,7 @@ class MRPEKF(object):
             w_obs (jnp.ndarray): 3x1 matrix, measured attitude rate vector.
 
         Returns:
-            Callable: Linearized kinematics system matrix F.
+            jnp.ndarray: Linearized kinematics system matrix F.
         """
         # Linearize f(x, w=w_obs) about x_ref.
         return tangent(
@@ -186,7 +188,7 @@ class MRPEKF(object):
     @staticmethod
     def tangent_g(
         x_ref: jnp.ndarray,
-    ) -> Callable:
+    ) -> jnp.ndarray:
         """ Gets the linearized kinematics equation matrix at eta=0:
             G = Jac(g(x=x_ref, eta))(eta=0).
 
@@ -194,7 +196,7 @@ class MRPEKF(object):
             x_ref (jnp.ndarray): 6x1 matrix, state vector to linearize at.
 
         Returns:
-            Callable: Linearized noise system matrix G.
+            jnp.ndarray: Linearized noise system matrix G.
         """
         # Linearize g(x=x_ref, eta) about eta=0.
         return tangent(
@@ -231,7 +233,6 @@ class MRPEKF(object):
         P_prior: jnp.ndarray,
         F_prior: jnp.ndarray,
         G_prior: jnp.ndarray,
-        R_w: jnp.ndarray,
         Q: jnp.ndarray,
         dt: float
     ) -> jnp.ndarray:
@@ -243,11 +244,8 @@ class MRPEKF(object):
             F_prior (jnp.ndarray): 6x6 matrix, linearized kinematics model
                 evaluated at x_prior and w_obs.
             G_prior (jnp.ndarray): 6x6 matrix, linearized noise model evaluated
-                at w_obs.
-            R_w (jnp.ndarray): 3x3 matrix, rate measurement covariances.
-                Note that R_w is promoted to a 6x6 matrix, with the
-                upper-left block being the R_w matrix, and the remaining
-                elements being zero.
+                at w_obs. Not used, but maintained for API consistency with
+                pred_P_stm().
             Q (jnp.ndarray): 6x6 matrix, process noise covariance.
             dt (float): Integration time interval.
 
@@ -255,12 +253,10 @@ class MRPEKF(object):
             jnp.ndarray: Posterior P estimate from Ricatti equation integration.
         """
         return autonomous_euler(
-            ev.evolve_MRP_Pmatrix,
+            ev.evolve_P_ricatti,
             P_prior,
             dt,
             F_prior,
-            G_prior,
-            block_diag(R_w, jnp.zeros((3, 3))),  # needs to be 6x6 matrix.
             Q
         )
 
@@ -269,7 +265,6 @@ class MRPEKF(object):
         P_prior: jnp.ndarray,
         F_prior: jnp.ndarray,
         G_prior: jnp.ndarray,
-        R_w: jnp.ndarray,
         Q: jnp.ndarray,
         dt: float
     ) -> jnp.ndarray:
@@ -283,12 +278,6 @@ class MRPEKF(object):
                 evaluated at x_prior and w_obs.
             G_prior (jnp.ndarray): 6x6 matrix, linearized noise model evaluated
                 at w_obs.
-            R_w (jnp.ndarray): 3x3 matrix, rate measurement covariances.
-                Note that R_w is promoted to a 6x6 matrix, with the
-                upper-left block being the R_w matrix, and the remaining
-                elements being zero. Not that R_w is not used in
-                'pred_P_stm' and the argument is included for consistency with
-                'pred_p_ricatti'.
             Q (jnp.ndarray): 6x6 matrix, process noise covariance.
             dt (float): Integration time interval.
 
@@ -324,10 +313,7 @@ class MRPEKF(object):
         Returns:
             jnp.ndarray: Error between prediction and observation.
         """
-        # Because we are using MRP matrices directly (which are shape 3x1),
-        # we only need the first three columns of the 6x3 measurement matrix
-        # H.
-        y = s_obs - MRPEKF.H[:, :3] @ s_post
+        y = s_obs - s_post
 
         return jnp.where(
             jnp.linalg.norm(y) < 0.33333,
@@ -341,20 +327,22 @@ class MRPEKF(object):
     @staticmethod
     def get_K(
         P_post: jnp.ndarray,
-        R_s: jnp.ndarray
+        R_s: jnp.ndarray,
+        H: jnp.ndarray
     ) -> jnp.ndarray:
         """ Calculate the Kalman gain matrix K.
 
         Args:
             P_post (jnp.ndarray): 6x6 matrix, predicted state covariance.
             R_s (jnp.ndarray): 3x3 matrix, observed MRP s covariance.
+            H (jnp.ndarray): 3x6 matrix, measurement model matrix.
 
         Returns:
             jnp.ndarray: 6x3 matrix, Kalman gain that also maps MRP s prediction
                 error back to state space.
         """
-        return P_post @ MRPEKF.H.T @ jnp.linalg.inv(
-            MRPEKF.H @ P_post @ MRPEKF.H.T + R_s
+        return P_post @ H.T @ jnp.linalg.inv(
+            H @ P_post @ H.T + R_s
         )
 
     @staticmethod
@@ -456,10 +444,10 @@ class MEKF():
 
         Because unit quaternions represent rotations, care needs to be taken
         when predicting quaternion values from observation and past estimates.
-        MEKF does this by tracking an error quaternion dq = [1, a/2].T, where
-        a is a 3-vector with compoents much less than one (small angle
-        approximation for the win). At each filter step we 
-        
+        MEKF does this by tracking an error quaternion dq = exp([0, a/2].T),
+        where a is a 3-vector with compoents much less than one (small angle
+        approximation for the win). Quaternion predictions is done utizling dq.
+
         The variable name convention is:
 
         x: 6x1 matrix, state vector with components [a, bias], where a is the

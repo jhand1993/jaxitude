@@ -19,7 +19,7 @@ def B_crp(q: jnp.ndarray) -> jnp.ndarray:
         q (jnp.ndarray): 3x1 matrix, CRP q parameters.
 
     Returns:
-        jnp.ndarray: B matrix for q.
+        jnp.ndarray: 3x3 matrix, B matrix for q.
     """
     return jnp.array(
         [[1. + q[0, 0]**2., q[0, 0] * q[1, 0] - q[2, 0], q[0, 0] * q[2, 0] + q[1, 0]],
@@ -36,7 +36,7 @@ def B_mrp(s: jnp.ndarray) -> jnp.ndarray:
         q (jnp.ndarray): 3x1 matrix, MRP s parameters.
 
     Returns:
-        jnp.ndarray: B matrix for s.
+        jnp.ndarray: 3x3 matrix, B matrix for s.
     """
     s2 = jnp.vdot(s, s)
     return jnp.array(
@@ -54,7 +54,7 @@ def inv_B_mrp(s: jnp.ndarray) -> jnp.ndarray:
         q (jnp.ndarray): 3x1 matrix, MRP s parameters.
 
     Returns:
-        jnp.ndarray: inverse B matrix for s.
+        jnp.ndarray: 3x3 matrix, inverse B matrix for s.
     """
     s2 = jnp.vdot(s, s)
     return jnp.array(
@@ -96,11 +96,9 @@ def evolve_MRP(
     return jnp.dot(0.25 * B_mrp(s), w)
 
 
-def evolve_MRP_Pmatrix(
+def evolve_P_ricatti(
     P: jnp.ndarray,
     F: jnp.ndarray,
-    G: jnp.ndarray,
-    Lambda: jnp.ndarray,
     Q: jnp.ndarray
 ) -> jnp.ndarray:
     """ Ricatti differential equation to propogate process noise P for MRP EKF
@@ -109,15 +107,12 @@ def evolve_MRP_Pmatrix(
     Args:
         P (jnp.ndarray): 6x6 matrix, process noise matrix.
         F (jnp.ndarray): 6x6 matrix, linearized kinematics system matrix.
-        G (jnp.ndarray): 6x6 matrix, linearized noise system matrix.
-        Lambda (jnp.ndarray): 6x6 matrix, MRP measurement covariance.
         Q (jnp.ndarray): 6x6 matrix, process noise covariance matrix.
 
     Returns:
         jnp.ndarray: 6x6 matrix, rates for P matrix.
     """
     return F @ P + P @ F.T + Q
-    # return F @ P + P @ F.T + G @ Lambda @ G.T + Q
 
 
 def evolve_w_from_MRP(
@@ -171,8 +166,7 @@ def evolve_quat(
         jnp.ndarray: 4x1 matrix, db/dt at time t.
     """
     # Append zero to w rate vector
-    zero = jnp.zeros((1, 1))
-    w_4 = jnp.vstack([zero, w])
+    w_4 = jnp.vstack([jnp.zeros((1, 1)), w])
     return compose_quat(b, 0.5 * w_4)
 
 
@@ -188,7 +182,7 @@ def euler_eqs(
         I (jnp.ndarray): 3x3 matrix inertia tensor
 
     Returns:
-        jnp.ndarray: I*w_dot vector as 3x1 matrix
+        jnp.ndarray: 3x1 matrix, product of inertia matrix I with rate w.
     """
-    I_w_dot = -cpo(w) @ I @ jnp.expand_dims(w, axis=-1)
-    return I_w_dot.flatten()
+    I_w_dot = -cpo(w) @ I @ w
+    return I_w_dot
