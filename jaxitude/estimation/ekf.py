@@ -79,8 +79,8 @@ class MRPEKF(object):
                 Defaults to 'stm'.
 
         Returns:
-            Tuple[jnp.ndarray]: 6x1 matrix, 6x1 matrix, 6x6 matrix, updated
-                state vector, noise vector, and process covariance estimates.
+            Tuple[jnp.ndarray]: 6x1 matrix, 6x6 matrix, updated state vector and
+                state covariance matrix estimates.
         """
         # Select proper alias for P propogation.
         P_prop = {
