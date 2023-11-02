@@ -3,7 +3,39 @@ from typing import Tuple
 import jax.numpy as jnp
 from jax import jit
 
-from jaxitude.base import Primitive
+from jaxitude.base import Primitive, cpo
+
+
+@jit
+def xi_op(b: jnp.ndarray) -> jnp.ndarray:
+    """ 4x3 Xi matrix operator representation of quaternion composition b.
+
+    Args:
+        b (jnp.ndarray): 4x1 matrix, quaternion parameters.
+
+    Returns:
+        jnp.ndarray: 4x3 matrix, Xi matrix operator.
+    """
+    return jnp.vstack(
+        [-b[1:, :].T[0],
+         b[0] + cpo(b[1:, :])]
+    )
+
+
+@jit
+def psi_op(b: jnp.ndarray) -> jnp.ndarray:
+    """ 4x3 Psi matrix operator representation of quaternion composition.
+
+    Args:
+        b (jnp.ndarray): 4x1 matrix, quaternion parameters.
+
+    Returns:
+        jnp.ndarray: 4x3 matrix, Psi matrix operator.
+    """
+    return jnp.vstack(
+        [-b[1:, :].T[0],
+         b[0] - cpo(b[1:, :])]
+    )
 
 
 @jit
@@ -54,9 +86,9 @@ def quat_inv(b: jnp.ndarray) -> jnp.ndarray:
     """
     return jnp.array(
         [[b[0, 0]],
-            [-b[1, 0]],
-            [-b[2, 0]],
-            [-b[3, 0]]]
+         [-b[1, 0]],
+         [-b[2, 0]],
+         [-b[3, 0]]]
     )
 
 
