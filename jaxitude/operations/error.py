@@ -8,7 +8,7 @@ from jax.random import split, normal, uniform
 
 from jaxitude.prv import PRV
 from jaxitude.quaternions import Quaternion, quat_expm_angleaxis
-from jaxitude.operations.composition import compose_quat
+from jaxitude.quaternions import compose_quat
 from jaxitude.base import colvec_cross
 
 

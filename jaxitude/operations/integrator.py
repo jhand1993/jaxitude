@@ -5,6 +5,8 @@ from typing import Callable
 
 import jax.numpy as jnp
 
+from jaxitude.quaternions import quat_expm, compose_quat
+
 
 def autonomous_euler(
     f: Callable,
@@ -135,41 +137,24 @@ def rk4(
     return x + dt * (k1 + 2. * k2 + 2. * k3 + k4) / 6.
 
 
-def lie_euler(
-    f: Callable,
-    t: float,
-    x: jnp.ndarray,
-    dt: float,
-    expm: Callable,
-    compfunc: Callable,
-    *args
+def quat_integrator(
+    b: jnp.ndarray,
+    w: jnp.ndarray,
+    dt: float
 ) -> jnp.ndarray:
-    """ Lie-Euler method for integrating dynamical system f(t, x) given the
-        exponential map 'expm' and composition function 'compfunc'.
-
-        *args, though optional, is important: any vector argument for equation
-        f(t, x, a1, a2, ..., ak) other than the state vector x will be fed into
-        f(t, x, a1, a2, ..., ak) via *args.
-
-        For example, if the dynamics relate observed rates w to the evolution of
-        MRP parameters s, then f(x->s, a1>w) are is the resulting function f.
-        That means if you call `lie_euler(f, x, *args)`, then args=(w,).
+    """ First-order quaternion integrator based on Grouch-Grossman method,
+        where w is constant during time step dt.
 
     Args:
-        f (Callable): Callable system of equations with t, matrix x, and *args
-            as arguments, in that order.
-        t (float): Time step t value.
-        x (jnp.ndarray): Nx1 state column vector.
+        b (jnp.ndarray): 4x1 matrix, quaternion  before integration.
+        w (jnp.ndarray): 3x1 matrix, angular rates during integration. Assumed
+            to be constant during integration.
         dt (float): Integration time interval.
-        exmp (Callable): Exponential map for x.
-        compfunc (Callable): Composition operator for x-like objects. Should
-            be of the form x_f = x_i * exp(dx), where * is the composition
-            operation.
 
     Returns:
-        jnp.ndarray: Integrated Nx1 state vector prediction.
+        jnp.ndarray: 4x1 matrix, integrated quaternion.
     """
-    return compfunc(
-        x,
-        expm(f(t, x, *args) * dt)
+    return compose_quat(
+        b,
+        quat_expm(w * dt * 0.5)
     )

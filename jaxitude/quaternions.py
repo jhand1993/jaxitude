@@ -7,6 +7,29 @@ from jaxitude.base import Primitive, cpo
 
 
 @jit
+def compose_quat(b_p: jnp.ndarray, b_pp: jnp.ndarray) -> jnp.ndarray:
+    """ Quaternion composition b = b_p x b_pp
+
+    Args:
+        b_p (jnp.ndarray): 4x1 matrix, first quaternion parameters.
+        b_pp (jnp.ndarray): 4x1 matrix, second quaterion parameters.
+
+    Returns:
+        jnp.ndarray: 4x1 matrix, composition of quaternion parameters.
+    """
+    matrix = jnp.array(
+        [[b_pp[0, 0], -b_pp[1, 0], -b_pp[2, 0], -b_pp[3, 0]],
+         [b_pp[1, 0], b_pp[0, 0], b_pp[3, 0], -b_pp[2, 0]],
+         [b_pp[2, 0], -b_pp[3, 0], b_pp[0, 0], b_pp[1, 0]],
+         [b_pp[3, 0], b_pp[2, 0], -b_pp[1, 0], b_pp[0, 0]]]
+    )
+
+    # Make sure to satisfy unity condition for quaternion parameters.
+    b = jnp.matmul(matrix, b_p)
+    return b
+
+
+@jit
 def xi_op(b: jnp.ndarray) -> jnp.ndarray:
     """ 4x3 Xi matrix operator representation of quaternion composition b.
 
@@ -90,6 +113,24 @@ def quat_inv(b: jnp.ndarray) -> jnp.ndarray:
          [-b[2, 0]],
          [-b[3, 0]]]
     )
+
+
+def evolve_quat(
+    b: jnp.ndarray,
+    w: jnp.ndarray
+) -> jnp.ndarray:
+    """ Returns db/dt given b(t) and w(t).
+
+    Args:
+        b (jnp.ndarray): 4x1 matrix, quaternion b parameters.
+        w (jnp.ndarray): 3x1 matrix, body angular rotation rates.
+
+    Returns:
+        jnp.ndarray: 4x1 matrix, db/dt at time t.
+    """
+    # Append zero to w rate vector
+    w_4 = jnp.vstack([jnp.zeros((1, 1)), w])
+    return compose_quat(b, 0.5 * w_4)
 
 
 class Quaternion(Primitive):

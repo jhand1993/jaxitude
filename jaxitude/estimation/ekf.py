@@ -18,8 +18,8 @@ from typing import Tuple
 import jax.numpy as jnp
 from jax.scipy.linalg import expm
 
-from jaxitude.rodrigues import shadow
-from jaxitude.operations import evolution as ev
+from jaxitude.rodrigues import shadow, evolve_MRP
+from jaxitude.operations.evolution import evolve_P_ricatti2
 from jaxitude.operations.integrator import autonomous_euler
 from jaxitude.operations.linearization import tangent
 
@@ -132,7 +132,7 @@ class MRPEKF(object):
         """
         return jnp.vstack(
             [
-                ev.evolve_MRP(x[:3, :], w - x[3:, :]),  # bias correction.
+                evolve_MRP(x[:3, :], w - x[3:, :]),  # bias correction.
                 jnp.zeros((3, 1))
             ]
         )
@@ -158,7 +158,7 @@ class MRPEKF(object):
         """
         return jnp.vstack(
             [
-                -ev.evolve_MRP(x[:3, :], eta[:3, :]),
+                -evolve_MRP(x[:3, :], eta[:3, :]),
                 eta[3:, :]
             ]
         )
@@ -253,7 +253,7 @@ class MRPEKF(object):
             jnp.ndarray: Posterior P estimate from Ricatti equation integration.
         """
         return autonomous_euler(
-            ev.evolve_P_ricatti,
+            evolve_P_ricatti2,
             P_prior,
             dt,
             F_prior,

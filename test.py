@@ -6,14 +6,12 @@ from jax.random import PRNGKey
 
 from jaxitude.base import R1, R2, R3, Primitive, DCM, swapEuler_proper
 from jaxitude.eulerangles import EulerAngle
-from jaxitude.quaternions import Quaternion
-from jaxitude.rodrigues import CRP, MRP
-from jaxitude.operations.composition import compose_quat, relative_crp, compose_mrp
+from jaxitude.quaternions import Quaternion, compose_quat
+from jaxitude.rodrigues import CRP, MRP, compose_crp, compose_mrp, evolve_MRP
 from jaxitude.determination.triad import get_triad_dcm
 from jaxitude.determination.davenport import get_K
 from jaxitude.determination.quest import quest_get_CRPq
 from jaxitude.determination.olae import olae_get_CRPq
-from jaxitude.operations import evolution as ev
 from jaxitude.operations.linearization import linearize
 from jaxitude.operations.integrator import autonomous_euler, autonomous_rk4
 from jaxitude.operations.error import HeadingNoise, QuatNoise
@@ -315,11 +313,11 @@ class TestCompositions(unittest.TestCase):
              [0.3],
              [0.1]]
         )
-        test_q = relative_crp(q2, q1)
+        test_q = compose_crp(q1, q2)
         target_q = jnp.array(
-            [[-0.31132078],
-             [0.18867928],
-             [-0.27358493]])
+            [[-0.28723404],
+             [0.42553191],
+             [0.5212766]])
         for i in range(3):
             self.assertAlmostEqual(
                 test_q[i], target_q[i],
@@ -481,7 +479,7 @@ class TestLinearize(unittest.TestCase):
              [0.0],
              [-0.1]]
         )
-        test_f = lambda x: ev.evolve_MRP(w_test, x)
+        test_f = lambda x: evolve_MRP(w_test, x)
         s_ref = jnp.zeros((3, 1))
         s_test = s_ref + 0.1
         linear_f_test = linearize(test_f, 3, 0, s_ref)
@@ -512,7 +510,7 @@ class TestIntegrators(unittest.TestCase):
 
     def test_auto_euler(self):
         test_s1 = autonomous_euler(
-            ev.evolve_MRP,
+            evolve_MRP,
             TestIntegrators.s0,
             TestIntegrators.dt,
             TestIntegrators.w0
@@ -531,7 +529,7 @@ class TestIntegrators(unittest.TestCase):
 
     def test_auto_rk4(self):
         test_s1 = autonomous_rk4(
-            ev.evolve_MRP,
+            evolve_MRP,
             TestIntegrators.s0,
             TestIntegrators.dt,
             TestIntegrators.w0
