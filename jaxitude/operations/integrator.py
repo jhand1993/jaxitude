@@ -5,7 +5,7 @@ from typing import Callable
 
 import jax.numpy as jnp
 
-from jaxitude.quaternions import quat_expm, compose_quat
+from jaxitude.quaternions import quat_expm, compose_quat, evolve_quat
 
 
 def autonomous_euler(
@@ -139,22 +139,37 @@ def rk4(
 
 def quat_integrator(
     b: jnp.ndarray,
+    dt: float,
     w: jnp.ndarray,
-    dt: float
+    tol: float = 1e-6
 ) -> jnp.ndarray:
     """ First-order quaternion integrator based on Grouch-Grossman method,
         where w is constant during time step dt.
 
+        If |w| < tol, then a linear approximation of Grouch-Grossman method is
+        used to prevent numerical instability.
+
     Args:
         b (jnp.ndarray): 4x1 matrix, quaternion  before integration.
+        dt (float): Integration time interval.
         w (jnp.ndarray): 3x1 matrix, angular rates during integration. Assumed
             to be constant during integration.
-        dt (float): Integration time interval.
+        to (float): Tolerance for switching to a linear approximation of the
+            Grouch-Grossman method (aka switch to Euler's method). Defaults to
+            1e-6.
 
     Returns:
         jnp.ndarray: 4x1 matrix, integrated quaternion.
     """
-    return compose_quat(
-        b,
-        quat_expm(w * dt * 0.5)
+
+    return jnp.where(
+        jnp.linalg.norm(w) < tol,
+        autonomous_euler(
+            evolve_quat,
+            b, dt, w
+        ),
+        compose_quat(
+            b,
+            quat_expm(w * dt * 0.5)
+        )
     )

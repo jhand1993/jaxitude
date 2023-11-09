@@ -16,12 +16,57 @@
 from typing import Tuple
 
 import jax.numpy as jnp
+from jax import jit
 from jax.scipy.linalg import expm
 
 from jaxitude.rodrigues import shadow, evolve_MRP
 from jaxitude.operations.evolution import evolve_P_ricatti2
 from jaxitude.operations.integrator import autonomous_euler
 from jaxitude.operations.linearization import tangent
+
+
+@jit
+def calculate_K(
+    P_post: jnp.ndarray,
+    R: jnp.ndarray,
+    H: jnp.ndarray
+) -> jnp.ndarray:
+    """ Calculate the Kalman gain matrix K.
+
+    Args:
+        P_post (jnp.ndarray): NxN matrix, predicted state covariance.
+        R (jnp.ndarray): MxM matrix, measurement covariance.
+        H (jnp.ndarray): MxN matrix, measurement model matrix.
+
+    Returns:
+        jnp.ndarray: NxM matrix, Kalman gain matrix
+    """
+    return P_post @ H.T @ jnp.linalg.inv(
+        H @ P_post @ H.T + R
+    )
+
+
+@jit
+def joseph_P(
+    P: jnp.ndarray,
+    K: jnp.ndarray,
+    H: jnp.ndarray,
+    R: jnp.ndarray
+) -> jnp.ndarray:
+    """ Update step for state covariance estimate P using Joseph form.
+
+    Args:
+        P (jnp.ndarray): NxN matrix, state covariance estimate.
+        K (jnp.ndarray): NxM matrix, Kalman gain matrix.
+        H (jnp.ndarray): MxN matrix, measurement model matrix.
+        R (jnp.ndarray): MxM matrix, measurement covariance.
+
+    Returns:
+        jnp.ndarray: NxN matrix, updated state covariance estimate.
+    """
+    # Get state vector dimension.
+    n = P.shape[0]
+    return (jnp.eye(n) - K @ H) @ P @ (jnp.eye(n) - K @ H).T + K @ R @ K.T
 
 
 class MRPEKF(object):
@@ -109,7 +154,7 @@ class MRPEKF(object):
 
         # Update state vector and state covariance estimate with Kalman gain.
         x_new = x_post + K @ y
-        P_new = (jnp.eye(6) - K @ H) @ P_post
+        P_new = joseph_P(P_post, K, H, R_s)
 
         return x_new, P_new
 
