@@ -227,7 +227,7 @@ class MRPEKF(object):
         # Linearize f(x, w=w_obs) about x_ref.
         return tangent(
             lambda x: MRPEKF.f(x, w_obs),
-            6, 0, x_ref
+            6, 0, [x_ref]
         )
 
     @staticmethod
@@ -246,7 +246,7 @@ class MRPEKF(object):
         # Linearize g(x=x_ref, eta) about eta=0.
         return tangent(
             lambda eta: MRPEKF.g(x_ref, eta),
-            6, 0, jnp.zeros((6, 1))
+            6, 0, [jnp.zeros((6, 1))]
         )
 
     @staticmethod

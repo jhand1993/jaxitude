@@ -170,6 +170,6 @@ def quat_integrator(
         ),
         compose_quat(
             b,
-            quat_expm(w * dt * 0.5)
+            quat_expm(w * dt)
         )
     )

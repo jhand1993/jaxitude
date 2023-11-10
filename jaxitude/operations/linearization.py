@@ -1,6 +1,6 @@
 """ Linearization functionality for dynamics and control equaltions.
 """
-from typing import Callable, Sequence
+from typing import Callable, Sequence, Iterable
 
 import jax.numpy as jnp
 from jax import jacfwd
@@ -10,17 +10,19 @@ def tangent(
     f: Callable,
     n_out: int,
     argnum: int,
-    ref_vector: jnp.ndarray
+    ref_vector: Iterable[jnp.ndarray]
 ) -> jnp.ndarray:
-    """ Calculates the system's dynamics tangent to the linearization point
-        at the ref_vector.
+    """ Calculates the system's dynamics tangent to the linearizing point(s)
+        at the ref_vector(s).
 
     Args:
         f (Callable): Callable system dynamics f(x1, x2, ..., xk).
         n_out (int): Dimensionality of output vector from f(x1, x2, ..., xk).
         argnum (int): Argument indices to linearize at.
-        ref_vector (jnp.ndarray): Nx1 matrix, system reference point to
-            linearize at.
+        ref_vector (Iterable[jnp.ndarray]): System of reference values to
+            linearize at. The first element must be the vector in which the
+            Jacobian is being calculated -- all other input ref vectors
+            are treated as parameters, not variables to differentiate against.
 
     Returns:
         jnp.ndarray: NxN matrix, Jacobian of linearized dynamics.
@@ -31,7 +33,7 @@ def tangent(
     return jacfwd(
         f,
         argnums=argnum
-    )(ref_vector).reshape((n_out, ref_vector.shape[0]))
+    )(*ref_vector).reshape((n_out, ref_vector[0].shape[0]))
 
 
 def linearize(
