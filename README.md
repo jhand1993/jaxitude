@@ -1,4 +1,4 @@
-# JAXitude: Intuitive Attitude Calculations and Estimation Accelerated With JAX
+# JAXitude: Intuitive Attitude Calculations, Conversions, and State Estimation Modeling with JAX
 
 ### Why JAXitude?
 
