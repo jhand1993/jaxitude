@@ -2,7 +2,7 @@ from typing import Tuple
 
 import jax.numpy as jnp
 
-from jaxitude.base import R1, R2, R3, Primitive, MiscUtil
+from jaxitude.base import R1, R2, R3, Primitive, swapEuler_proper
 
 
 class EulerAngle(Primitive):
@@ -11,7 +11,7 @@ class EulerAngle(Primitive):
     def __init__(self, angles: jnp.ndarray, order: str) -> None:
         """
         Attributes:
-            angles (jnp.ndarray): 1x3 matrix of Euler angles alpha, beta,
+            angles (jnp.ndarray): 3x1 matrix of Euler angles alpha, beta,
                 and gamma.
             order (str): Order of rotations as a string.  An example includes
                 '121', 'xyx', or 'XYX for proper x-axis, y-axis, x-axis
@@ -22,12 +22,12 @@ class EulerAngle(Primitive):
             self.dcm (jnp.ndarray): Euler angle DCM.
         """
         # Define attributes.
-        self.angles = angles
+        self.angles = angles.reshape((3, 1))
         self.order = self._order_decipher(order)
         f_alpha, f_beta, f_gamma = self._order_rotations(order)
-        self.R_alpha = f_alpha(angles[0])
-        self.R_beta = f_beta(angles[1])
-        self.R_gamma = f_gamma(angles[2])
+        self.R_alpha = f_alpha(angles[0, 0])
+        self.R_beta = f_beta(angles[1, 0])
+        self.R_gamma = f_gamma(angles[2, 0])
         self.dcm = self.R_gamma() @ self.R_beta() @ self.R_alpha()
 
     def _order_decipher(self, order: str) -> str:
@@ -90,5 +90,6 @@ class EulerAngle(Primitive):
             )
 
         return self.__class__(
-            MiscUtil.swapEuler_proper(self.angles), self.order
+            swapEuler_proper(self.angles),
+            self.order
         )

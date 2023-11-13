@@ -1,0 +1,49 @@
+
+------------------------------------------------------------
+Sample frequency of IMU: [fs] = 10 Hz
+Reference frame: 1
+Simulation time duration: 180.0 s
+Simulation runs: 1
+
+------------------------------------------------------------
+Simulation results are saved to /Users/jaredhand/Documents/misc_projects/gnss-ins-sim_work/demo_saved_data/2023-10-17-13-10-07
+The following results are saved:
+	time: sample time
+	ref_pos: true position in the local NED frame
+	ref_vel: true vel in the NED frame
+	ref_att_euler: true attitude (Euler angles, ZYX)
+	ref_accel: true accel in the body frame
+	ref_gyro: true angular velocity in the body frame
+	ref_mag: true magnetic field in the body frame
+	accel: accel measurements
+	gyro: gyro measurements
+	mag: magnetometer measurements
+	algo_time: sample time from algo
+	ad_gyro: Allan deviation of gyro
+	ad_accel: Allan deviation of accel
+	ref_att_quat: true attitude (quaternion)
+
+------------------------------------------------------------
+Sample frequency of IMU: [fs] = 10 Hz
+Reference frame: 1
+Simulation time duration: 180.0 s
+Simulation runs: 1
+
+------------------------------------------------------------
+Simulation results are saved to /Users/jaredhand/Documents/misc_projects/gnss-ins-sim_work/demo_saved_data/2023-10-17-13-10-59
+The following results are saved:
+	time: sample time
+	ref_pos: true position in the local NED frame
+	ref_vel: true vel in the NED frame
+	ref_att_euler: true attitude (Euler angles, ZYX)
+	ref_accel: true accel in the body frame
+	ref_gyro: true angular velocity in the body frame
+	ref_mag: true magnetic field in the body frame
+	accel: accel measurements
+	gyro: gyro measurements
+	mag: magnetometer measurements
+	algo_time: sample time from algo
+	ad_gyro: Allan deviation of gyro
+	ad_accel: Allan deviation of accel
+	ref_att_quat: true attitude (quaternion)
+

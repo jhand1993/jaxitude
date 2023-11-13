@@ -5,15 +5,18 @@ from jax import jit
 
 
 @jit
-def cayley_transform(X: jnp.ndarray) -> jnp.ndarray:
+def cayley_transform(
+    X: jnp.ndarray
+) -> jnp.ndarray:
     """ Cayley transformation for matrix X.  X must be either skew-symmetric
         or it is orthogonal.
 
     Args:
-        X (jnp.jndarray): Skew-symmetric or orthogonal matrix.
+        X (jnp.jndarray): NxN matrix, Skew-symmetric or orthogonal matrix.
 
     Returns:
-        jnp.ndarray: Corresponding orthogonal or or skew-symmetric matrix.
+        jnp.ndarray: NxN matriox, corresponding orthogonal or skew-symmetric
+            matrix.
     """
     # must be a square matrix to work.
     n = X.shape[0]
@@ -23,18 +26,24 @@ def cayley_transform(X: jnp.ndarray) -> jnp.ndarray:
 
 
 @jit
-def q_from_cayley(dcm: jnp.ndarray) -> jnp.ndarray:
+def q_from_cayley(
+    dcm: jnp.ndarray
+) -> jnp.ndarray:
     """ Converts a rotation matrix (dcm attribute) to q via Cayley's
     transformation.
 
     Args:
-        dcm (jnp.ndarray): 3x3 rotation dcm matrix.
+        dcm (jnp.ndarray): 3x3 matrix, DCM.
 
     Returns:
-        jnp.ndarray: 1x3 q parameter matrix.
+        jnp.ndarray: 3x1 matrix, CRP q parameters.
     """
-    Q = q_from_cayley(dcm)
-    return jnp.ndarray([-Q[1, 2], Q[0, 2], -Q[0, 1]])
+    Q = cayley_transform(dcm)
+    return jnp.ndarray(
+        [[-Q[1, 2]],
+         [Q[0, 2]],
+         [-Q[0, 1]]]
+    )
 
 
 # def extended_cayley_transform(X: jnp.ndarray) -> jnp.ndarray:

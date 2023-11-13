@@ -1,8 +1,6 @@
 """
 PRV: Principle Rotation Vector.
 """
-from functools import partial
-
 import jax.numpy as jnp
 from jax import jit
 
@@ -16,16 +14,17 @@ class PRV(Primitive):
         """
         Attributes:
             phi (float): principle rotation in radians.
-            e (jax.ndarray): 3x1 array reprentation of principle axis.
-            dcm (jax.ndarray): 3x3 rotation matrix.
+            e (jax.ndarray): 3x1 matrx, principle axis vector.
+            dcm (jax.ndarray): 3x3 matrix, rotation matrix.
         """
         super().__init__()
         self.phi = phi
         self.e = e
-        self.dcm = self._build_prv(phi, e)
+        self.dcm = PRV._build_prv(phi, e)
 
-    @partial(jit, static_argnums=0)
-    def _build_prv(self, phi: float, e: jnp.ndarray):
+    @staticmethod
+    @jit
+    def _build_prv(phi: float, e: jnp.ndarray):
         """ Takes input phi scalar and e vector to build PRV rotation matrix.
 
         Args:
@@ -35,39 +34,38 @@ class PRV(Primitive):
         Returns:
             jnp.ndarray: PRV 3x3 dcm.
         """
-        cosphi = jnp.cos(phi)
-        sinphi = jnp.sin(phi)
-        sigma = 1. - cosphi
-        e1, e2, e3 = e.copy().flatten()
+        cphi = jnp.cos(phi)
+        sphi = jnp.sin(phi)
+        sigma = 1. - cphi
         return jnp.array(
-            [[e1**2. * sigma + cosphi, e1 * e2 * sigma + e3 * sinphi, e1 * e3 * sigma - e2 * sinphi],
-             [e1 * e2 * sigma - e3 * sinphi, e2**2. * sigma + cosphi, e2 * e3 * sigma + e1 * sinphi],
-             [e1 * e3 * sigma + e2 * sinphi, e2 * e3 * sigma - e1 * sinphi, e3**2. * sigma + cosphi]]
+            [[e[0, 0]**2. * sigma + cphi, e[0, 0] * e[1, 0] * sigma + e[2, 0] * sphi, e[0, 0] * e[2, 0] * sigma - e[1, 0] * sphi],
+             [e[0, 0] * e[1, 0] * sigma - e[2, 0] * sphi, e[1, 0]**2. * sigma + cphi, e[1, 0] * e[2, 0] * sigma + e[0, 0] * sphi],
+             [e[0, 0] * e[2, 0] * sigma + e[1, 0] * sphi, e[1, 0] * e[2, 0] * sigma - e[0, 0] * sphi, e[2, 0]**2. * sigma + cphi]]
         )
 
     def get_b_from_PVR(self) -> jnp.ndarray:
         """ Calculates and returns Euler parameters directly from phi and e.
 
         Returns:
-            jnp.ndarray: 1x3 matrix of Euler parameters b.
+            jnp.ndarray: 4x1 matrix of Euler parameters b.
         """
-        return jnp.ndarray(
-            [jnp.cos(self.phi / 2.),
-             self.e[0] * jnp.sin(self.phi / 2.),
-             self.e[1] * jnp.sin(self.phi / 2.),
-             self.e[2] * jnp.sin(self.phi / 2.)]
+        return jnp.array(
+            [[jnp.cos(self.phi * 0.5)],
+             [self.e[0, 0] * jnp.sin(self.phi * 0.5)],
+             [self.e[1, 0] * jnp.sin(self.phi * 0.5)],
+             [self.e[2, 0] * jnp.sin(self.phi * 0.5)]]
         )
 
     def get_q_from_PVR(self) -> jnp.ndarray:
         """ Calculates and returns CRP q directly from phi and e.
 
         Returns:
-            jnp.ndarray: 1x3 matrix of CRP q values.
+            jnp.ndarray: 3x1 matrix of CRP q values.
         """
-        return jnp.ndarray(
-            [self.e[0] * jnp.tan(self.phi / 2.),
-             self.e[1] * jnp.tan(self.phi / 2.),
-             self.e[2] * jnp.tan(self.phi / 2.)]
+        return jnp.array(
+            [[self.e[0, 0] * jnp.tan(self.phi * 0.5)],
+             [self.e[1, 0] * jnp.tan(self.phi * 0.5)],
+             [self.e[2, 0] * jnp.tan(self.phi * 0.5)]]
         )
 
     def get_s_from_PVR(self) -> jnp.ndarray:
@@ -76,8 +74,8 @@ class PRV(Primitive):
         Returns:
             jnp.ndarray: 1x3 matrix of MRP s values.
         """
-        return jnp.ndarray(
-            [self.e[0] * jnp.tan(self.phi / 4.),
-             self.e[1] * jnp.tan(self.phi / 4.),
-             self.e[2] * jnp.tan(self.phi / 4.)]
+        return jnp.array(
+            [[self.e[0, 0] * jnp.tan(self.phi * 0.25)],
+             [self.e[1, 0] * jnp.tan(self.phi * 0.25)],
+             [self.e[2, 0] * jnp.tan(self.phi * 0.25)]]
         )

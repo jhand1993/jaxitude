@@ -5,7 +5,7 @@ from jax.lax import while_loop
 import jax.numpy as jnp
 
 from jaxitude.determination.davenport import get_B
-from jaxitude.base import MiscUtil
+from jaxitude.base import antisym_dcm_vector
 
 
 def K_eig_eq(x: float, K: jnp.ndarray) -> float:
@@ -58,21 +58,25 @@ def quest_get_CRPq(
 
     Args:
         w (jnp.ndarray): N matrix with weights.
-        v_b_set (jnp.ndarray): Nx3 matrix of N body frame headings from each
+        v_b_set (jnp.ndarray): 3xN matrix of N body frame headings from each
             sensor.
-        v_n_set (jnp.ndarray): Nx3 matrix of N inertial frame headings from
+        v_n_set (jnp.ndarray): 3xN matrix of N inertial frame headings from
             each sensor.
         e (float, optional): Desired precision. Defaults to 1e-16.
 
     Returns:
-        jnp.ndarray: 1x3 q parameter matrix.
+        jnp.ndarray: 3x1 q parameter matrix.
     """
+    # Same setup as Davenport
     B = get_B(w, v_b_set, v_n_set)
     S = B + B.T
     sigma = jnp.trace(B)
-    Z = jnp.expand_dims(MiscUtil.antisym_dcm_vector(B), axis=-1)
+    Z = antisym_dcm_vector(B)
     K = jnp.block([[sigma, Z.T], [Z, S - jnp.eye(3) * sigma]])
+
+    # Get eigen value.
     lam = get_lam(w, K, e=e)
+
     return jnp.matmul(
         jnp.linalg.inv((lam + sigma) * jnp.eye(3) - S), Z
     ).flatten()
@@ -88,15 +92,15 @@ def quest_get_Quatb(
 
     Args:
         w (jnp.ndarray): N matrix with weights.
-        v_b_set (jnp.ndarray): Nx3 matrix of N body frame headings from each
+        v_b_set (jnp.ndarray): 3xN matrix of N body frame headings from each
             sensor.
-        v_n_set (jnp.ndarray): Nx3 matrix of N inertial frame headings from
+        v_n_set (jnp.ndarray): 3xN matrix of N inertial frame headings from
             each sensor.
         e (float, optional): Desired precision. Defaults to 1e-16.
 
     Returns:
-        jnp.ndarray: 1x4 b parameter matrix.
+        jnp.ndarray: 4x1 b parameter matrix.
     """
     q = quest_get_CRPq(w, v_b_set, v_n_set, e=e)
-    q2 = jnp.dot(q, q)
+    q2 = (q.T @ q)[0, 0]
     return jnp.array(1., q[0], q[1], q[2]) / jnp.sqrt(1. + q2)

@@ -2,7 +2,7 @@
 """
 import jax.numpy as jnp
 
-from jaxitude.base import MiscUtil
+from jaxitude.base import antisym_dcm_vector
 
 
 def get_B(
@@ -14,17 +14,18 @@ def get_B(
         vectors should be unit vectors.
 
     Args:
-        w (jnp.ndarray): 1xN matrix of sensor weights
-        v_b_set (jnp.ndarray): Nx3 matrix of N body frame headings from each
+        w (jnp.ndarray): 1xN matrix, sensor weights.
+        v_b_set (jnp.ndarray): 3xN matrix, N body frame headings from each
             sensor.
-        v_n_set (jnp.ndarray): Nx3 matrix of N inertial frame headings from
+        v_n_set (jnp.ndarray): 3xN matrix, N inertial frame headings from
             each sensor.
 
     Returns:
         jnp.ndarray: B matrix
     """
     return sum(
-        [w[i] * jnp.outer(v_b_set[i], v_n_set[i]) for i in range(w.shape[0])]
+        [w[i] * jnp.outer(v_b_set[:, i], v_n_set[:, i])
+         for i in range(w.shape[0])]
     )
 
 
@@ -37,10 +38,10 @@ def get_K(
         vectors should be unit vectors.
 
     Args:
-        w (jnp.ndarray): 1xN matrix of sensor weights
-        v_b_set (jnp.ndarray): Nx3 matrix of N body frame headings from each
+        w (jnp.ndarray): 1xN matrix, sensor weights
+        v_b_set (jnp.ndarray): 3xN matrix, N body frame headings from each
             sensor.
-        v_n_set (jnp.ndarray): Nx3 matrix of N inertial frame headings from
+        v_n_set (jnp.ndarray): 3xN matrix, N inertial frame headings from
             each sensor.
 
     Returns:
@@ -49,7 +50,7 @@ def get_K(
     B = get_B(w, v_b_set, v_n_set)
     sigma = jnp.trace(B)
     S = B + B.T
-    Z = jnp.expand_dims(MiscUtil.antisym_dcm_vector(B), axis=-1)
+    Z = antisym_dcm_vector(B)
 
     return jnp.block([[sigma, Z.T], [Z, S - jnp.eye(3) * sigma]])
 
@@ -64,13 +65,13 @@ def get_g(
         vectors.
 
     Args:
-        beta (jnp.ndarray): 1x4 matrix representation of Euler parameters.
+        beta (jnp.ndarray): 4x1 matrix, Euler parameters (quaternions).
             Input for optimization. Not usually used directly, but provided for
             completeness.
-        w (jnp.ndarray): 1xN matrix of sensor weights
-        v_b_set (jnp.ndarray): Nx3 matrix of N body frame headings from each
+        w (jnp.ndarray): 1xN matrix, sensor weights
+        v_b_set (jnp.ndarray): 3xN matrix, N body frame headings from each
             sensor.
-        v_n_set (jnp.ndarray): Nx3 matrix of N inertial frame headings from
+        v_n_set (jnp.ndarray): 3xN matrix, N inertial frame headings from
             each sensor.
 
     Returns:
@@ -78,6 +79,6 @@ def get_g(
     """
     K = get_K(w, v_b_set, v_n_set)
     return jnp.matmul(
-        jnp.expand_dims(beta, axis=-1),
-        jnp.matmul(K, jnp.expand_dims(beta, axis=-1).T)
+        beta,
+        jnp.matmul(K, beta)
     )
