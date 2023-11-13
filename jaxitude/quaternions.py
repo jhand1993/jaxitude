@@ -67,20 +67,20 @@ def quat_expm(v: jnp.ndarray) -> jnp.ndarray:
 
     Args:
         v (jnp.ndarray): 3x1 matrix, vector to map to quaternion set b. If
-        |v| < 1e-6, then a unit quaternion is returned.
+        |v| < 0.01, then a linear approximation is used.
 
     Returns:
         jnp.ndarray: 4x1 matrix, quaternion set b from exponential map of v.
     """
     angle = jnp.linalg.norm(v)
     return jnp.where(
-        angle > 0.,
+        jnp.abs(angle) > 0.01,
         quat_expm_angleaxis(angle, v / angle),
         jnp.array(
             [[1.],
-             [0.],
-             [0.],
-             [0.]]
+             [v[0, 0] * 0.5],
+             [v[1, 0] * 0.5],
+             [v[2, 0] * 0.5]]
         )
     )
 
@@ -90,8 +90,8 @@ def quat_expm_angleaxis(
     angle: float,
     e: jnp.ndarray
 ) -> jnp.ndarray:
-    """ Quaternion exponential map given angle and unit vector e. If angle <
-        1e-6, then a unit quaternion is returned.
+    """ Quaternion exponential map given angle and unit vector e. If
+        |v| < 0.01, then a linear approximation is used.
 
     Args:
         angle (float): Angle in radians.
@@ -101,7 +101,7 @@ def quat_expm_angleaxis(
         jnp.ndarray: 4x1 matrix, quaternion set b from exponential map of v.
     """
     return jnp.where(
-        angle > 0.,
+        jnp.abs(angle) > 0.,
         jnp.array(
             [[jnp.cos(angle * 0.5)],
              [e[0, 0] * jnp.sin(angle * 0.5)],
@@ -110,9 +110,9 @@ def quat_expm_angleaxis(
         ),
         jnp.array(
             [[1.],
-             [0.],
-             [0.],
-             [0.]]
+             [e[0, 0] * 0.5],
+             [e[1, 0] * 0.5],
+             [e[2, 0] * 0.5]]
         )
     )
 

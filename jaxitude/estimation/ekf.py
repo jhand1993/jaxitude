@@ -13,36 +13,39 @@
     properties the state space itself.
 
 """
-from typing import Tuple
+from typing import Tuple, Callable
 
 import jax.numpy as jnp
 from jax import jit
 from jax.scipy.linalg import expm
 
 from jaxitude.rodrigues import shadow, evolve_MRP
-from jaxitude.operations.evolution import evolve_P_ricatti2
-from jaxitude.operations.integrator import autonomous_euler
+from jaxitude.quaternions import xi_op, evolve_quat
+from jaxitude.base import colvec_cross
+from jaxitude.operations.evolution import evolve_P_ricatti2, evolve_P_ricatti
+from jaxitude.operations.integrator import autonomous_euler, autonomous_rk4
+from jaxitude.operations.integrator import quat_integrator
 from jaxitude.operations.linearization import tangent
 
 
 @jit
 def calculate_K(
-    P_post: jnp.ndarray,
+    P_new: jnp.ndarray,
     R: jnp.ndarray,
     H: jnp.ndarray
 ) -> jnp.ndarray:
     """ Calculate the Kalman gain matrix K.
 
     Args:
-        P_post (jnp.ndarray): NxN matrix, predicted state covariance.
+        P_new (jnp.ndarray): NxN matrix, predicted state covariance.
         R (jnp.ndarray): MxM matrix, measurement covariance.
         H (jnp.ndarray): MxN matrix, measurement model matrix.
 
     Returns:
         jnp.ndarray: NxM matrix, Kalman gain matrix
     """
-    return P_post @ H.T @ jnp.linalg.inv(
-        H @ P_post @ H.T + R
+    return P_new @ H.T @ jnp.linalg.inv(
+        H @ P_new @ H.T + R
     )
 
 
@@ -227,7 +230,7 @@ class MRPEKF(object):
         # Linearize f(x, w=w_obs) about x_ref.
         return tangent(
             lambda x: MRPEKF.f(x, w_obs),
-            6, 0, [x_ref]
+            6, 0, x_ref
         )
 
     @staticmethod
@@ -246,7 +249,7 @@ class MRPEKF(object):
         # Linearize g(x=x_ref, eta) about eta=0.
         return tangent(
             lambda eta: MRPEKF.g(x_ref, eta),
-            6, 0, [jnp.zeros((6, 1))]
+            6, 0, jnp.zeros((6, 1))
         )
 
     @staticmethod
@@ -478,7 +481,7 @@ class MRPEKF(object):
         )
 
 
-class MEKF():
+class MEKF:
     """ Container class for Multiplicative extended kalman filter (MEKF)
         calculations.
 
@@ -487,21 +490,323 @@ class MEKF():
         noise evolution.  The underlying process is time-continuous and
         measurements are time-discrete.
 
-        Because unit quaternions represent rotations, care needs to be taken
-        when predicting quaternion values from observation and past estimates.
-        MEKF does this by tracking an error quaternion dq = exp([0, a/2].T),
-        where a is a 3-vector with compoents much less than one (small angle
-        approximation for the win). Quaternion predictions is done utizling dq.
-
         The variable name convention is:
 
-        x: 6x1 matrix, state vector with components [a, bias], where a is the
-            error quaternion set and bias are the gyroscope biases.
+        x_aug: 10x1 matrix, state vector with components [a, b, bias], where a
+            are the local attitude error parameters.
         P: 6x6 matrix, state covariance matrix estimate.
         w_obs: 3x1 matrix, observed attitude rates.
-        q_obs: 4x1 matrix, observed quaternion set.
+        b_obs: 4x1 matrix, observed quaternion set.
         R_w: 3x3 matrix, attitude rate measurement covariance.
         R_q: 4x4 matrix, MRP measurement covariance.
-        Q: 6x6 matrix, (process) noise covariance.
+        Q_i: 6x6 matrix, internal process noise covariance.
+        Q_a: 6x6 matrix, additive process noise covariance.
         dt: time interval of filter step.
     """
+    # Define the measurement matrix.
+    H = jnp.hstack([jnp.eye(4), jnp.zeros((4, 3))])
+
+    @staticmethod
+    def f(
+        x_est: jnp.ndarray,
+        w: jnp.ndarray,
+    ) -> jnp.ndarray:
+        """ Dynamical system equations relating current state and measured rates
+            w to dx/dt.
+
+        Args:
+            x_est (jnp.ndarray): 7x1 matrix, state vector estimate.
+            w (jnp.ndarray): 3x1 matrix, measured rate vector.
+
+        Returns:
+            jnp.ndarray: 4x1 matrix, quaternion component of dx/dt.
+        """
+        return evolve_quat(x_est[:4, :], w - x_est[4:, :])
+
+    @staticmethod
+    def f_a(
+        x_est: jnp.ndarray,
+        w: jnp.ndarray,
+    ) -> jnp.ndarray:
+        """ Dynamical system equations for propagating covariance matrix.
+
+        Args:
+            x_est (jnp.ndarray): 6x1 matrix, state vector estimate.
+            w (jnp.ndarray): 3x1 matrix, measured rate vector.
+
+        Returns:
+            jnp.ndarray: 6x1 matrix, dx/dt.
+        """
+        return jnp.vstack(
+            [
+                colvec_cross(x_est[:3, :], w - x_est[3:, :]),
+                jnp.zeros((3, 1))
+            ]
+        )
+
+    @staticmethod
+    def g_a(
+        x_est: jnp.ndarray,
+        eta: jnp.ndarray,
+    ) -> jnp.ndarray:
+        """ System noise equations calculated from state and noise vector.
+
+        Args:
+            x_est (jnp.ndarray): 6x1 matrix, state vector estimate.
+            eta (jnp.ndarray): 6x1 matrix, noise vector.
+
+        Returns:
+            jnp.ndarray: 6x1 matrix, noise contribution to dx/dt.
+        """
+        return jnp.vstack(
+            [
+                -colvec_cross(x_est[:3, :], eta[:3, :]),
+                eta[3:, :]
+            ]
+        )
+
+    @staticmethod
+    def tangent_f_a(
+        x_est: jnp.ndarray,
+        w_obs: jnp.ndarray
+    ) -> jnp.ndarray:
+        """ Gets the linearized kinematics equation matrix at x=x_ref:
+            F = Jac(f(x, w=w_obs))(x_est).
+
+        Args:
+            x_est (jnp.ndarray): 6x1 matrix, state vector estimate to linearize
+                at.
+            w_obs (jnp.ndarray): 3x1 matrix, measured attitude rate vector.
+
+        Returns:
+            jnp.ndarray: 6x6 matrix, linearized kinematics system matrix F.
+        """
+        # Linearize f(x, w=w_obs) about x_est.
+        return tangent(
+            lambda x: MEKF.f_a(x, w_obs),
+            6, 0, x_est
+        )
+
+    @staticmethod
+    def tangent_g_a(
+        x_est: jnp.ndarray,
+    ) -> jnp.ndarray:
+        """ Gets the linearized kinematics equation matrix at eta=0:
+            G = Jac(g(x=x_est, eta))(eta=0).
+
+        Args:
+            x_est (jnp.ndarray): 6x1 matrix, state vector to linearize at.
+
+        Returns:
+            jnp.ndarray: 6x6 matrix, linearized noise system matrix G.
+        """
+        # Linearize g(x=x_est, eta) about eta=0.
+        return tangent(
+            lambda eta: MEKF.g_a(x_est, eta),
+            6, 0, jnp.zeros((6, 1))
+        )
+
+    @staticmethod
+    def pred_x(
+        x_prior: jnp.ndarray,
+        w_obs: jnp.ndarray,
+        dt: float
+    ) -> jnp.ndarray:
+        """ Predicts new state vector x_new from x_prior and w_obs along time
+            interval dt.
+
+        Args:
+            x_prior (jnp.ndarray): 7x1 matrix, prior state vector estimate.
+            w_obs (jnp.ndarray): 3x1 matrix, current attitude rate vector
+                measurement
+            dt (float): time step to integrate.
+
+        Returns:
+            jnp.ndarray: 7x1 matrix, quaternion component of state vector.
+        """
+        return jnp.vstack(
+            [
+                quat_integrator(
+                    x_prior[:4, :],
+                    dt,
+                    w_obs - x_prior[4:, :]
+                ),
+                x_prior[4:, :]
+            ]
+        )
+
+    @staticmethod
+    def pred_P_ricatti(
+        P_prior: jnp.ndarray,
+        F_a_prior: jnp.ndarray,
+        G_a_prior: jnp.ndarray,
+        Q_a: jnp.ndarray,
+        Q_i: jnp.ndarray,
+        dt
+    ) -> jnp.ndarray:
+        """ Predict P_post from x_prior and covariance structures using Ricatti
+            equation integrated with the RK4 method.
+
+        Args:
+            P_prior (jnp.ndarray): 6x6 matrix, prior P estimate.
+            F_a_prior (jnp.ndarray): 6x6 matrix, linearized dynamics model
+                evaluated at x_prior and w_obs.
+            G_a_prior (jnp.ndarray): 6x6 matrix, linearized noise model
+                evaluated at x_prior and w_obs.
+            Q_a (jnp.ndarray): 6x6 matrix, additive process noise covariance.
+            Q_i (jnp.ndarray): 6x6 matrix, internal process noise covariance.
+            dt (float): Integration time interval.
+
+        Returns:
+            jnp.ndarray: 6x6 matrix, posterior P estimate from Ricatti equation
+                integration.
+        """
+        return autonomous_rk4(
+            evolve_P_ricatti,
+            P_prior,
+            dt,
+            F_a_prior,
+            G_a_prior,
+            Q_a,
+            Q_i
+        )
+
+    @staticmethod
+    def H_a(b: jnp.ndarray) -> jnp.ndarray:
+        """ Generate MEKF measurement matrix from current quaternion estimate b.
+
+        Args:
+            b (jnp.ndarray): 4x1 matrix, current quaternion estimate.
+
+        Returns:
+            jnp.ndarray: 4x6 matrix, measurement matrix mapping state parameters
+                a to measured quaternion.
+        """
+        return jnp.hstack([0.5 * xi_op(b), jnp.zeros((4, 3))])
+
+    @staticmethod
+    def pred_b(
+        b_est: jnp.ndarray,
+        w_obs: jnp.ndarray,
+        dt: float
+    ) -> jnp.ndarray:
+        """ Predict the global attitude quaternion using quaternion integration.
+
+        Args:
+            b_est (jnp.ndarray): 4x1 matrix, prior quaternion estimate.
+            w_obs (jnp.ndarray): 3x1 matrix, measured attitude rate.
+            dt (float): Integration time interval.
+
+        Returns:
+            jnp.ndarray: 4x1 matrix, Propagated global attitude quaternion estimate.
+        """
+        return quat_integrator(
+            b_est,
+            dt,
+            w_obs
+        )
+
+    @staticmethod
+    def update_b(
+        b_new: jnp.ndarray,
+        a_post: jnp.ndarray
+    ) -> jnp.ndarray:
+        """ Updates the propagated quaternion estimate with the local attitude
+            error.
+
+        Args:
+            b_est (jnp.ndarray): 4x1 matrix, propagated quaternion estimate.
+            b_est (jnp.ndarray): 3x1 matrix, updated state vector estimate.
+
+        Returns:
+            jnp.ndarray: 4x1 matrix, updated quaternion estimate.
+        """
+        b_temp = b_new + 0.5 * xi_op(b_new) @ a_post
+        return b_temp / jnp.linalg.norm(b_temp)
+
+    @staticmethod
+    def filter_step(
+        x_aug_prior: jnp.ndarray,
+        P_prior: jnp.ndarray,
+        w_obs: jnp.ndarray,
+        b_obs: jnp.ndarray,
+        R_b: jnp.ndarray,
+        Q_a: jnp.ndarray,
+        Q_i: jnp.ndarray,
+        H: jnp.ndarray,
+        H_a: Callable,
+        dt: float,
+    ) -> Tuple[jnp.ndarray]:
+        """ A single MEKF timestep.
+
+        Args:
+            x_aug_prior (jnp.ndarray): 10x1 matrix, augmented prior state vector
+                estimate.
+            P_prior (jnp.ndarray): 6x6 matrix, prior state covariance estimate.
+            w_obs (jnp.ndarray): 3x1 matrix, observed attitude rate vector.
+            b_obs (jnp.ndarray): 4x1 matrix, observed attitude, represented with
+                quaternion b.
+            R_b (jnp.ndarray): 4x4 matrix, quaternion measurement covariance.
+            Q_a (jnp.ndarray): 6x6 matrix, additive process noise covariance.
+            Q_i (jnp.ndarray): 6x6 matrix, internal process noise covariance.
+            H (jnp.ndarray):  6x6 matrix, state measurement matrix model.    
+            H_a (Callable): Callable that produces a 6x6 matrix, covariance
+                measurement matrix model.
+            dt (float): Integration time interval.
+
+        Returns:
+            Tuple[jnp.ndarray]: 10x1 matrix, 6x6 matrix: updated augmented state
+                vector and state covariance estimates.
+        """
+        # Break up x_aug.
+        x_prior = x_aug_prior[3:, :]
+
+        # Reset local attitude error estimates to zero.
+        a_prior = jnp.zeros((3, 1))
+
+        # Build x_a vector.
+        x_a_prior = jnp.vstack(
+            [a_prior, x_prior[4:, :]]
+        )
+
+        # Get linearized kinematics and noise matrices.
+        F_a_prior = MEKF.tangent_f_a(x_a_prior, w_obs)
+        G_a_prior = MEKF.tangent_g_a(x_a_prior)
+
+        # Get posterior predictions for global attitude quaternion, state vector,
+        # and state covariance matrix.
+        x_new = MEKF.pred_x(x_prior, w_obs, dt)
+        P_new = MEKF.pred_P_ricatti(
+            P_prior,
+            F_a_prior,
+            G_a_prior,
+            Q_a,
+            Q_i,
+            dt
+        )
+        # Get posterior error and Kalman gain using calculated H matrix.
+        r_b = b_obs - H @ x_new
+
+        # Calculate the H_a matrix used to calculate K using current b estimate.
+        H_a_b_est = H_a(x_new[:4, :])
+
+        K = calculate_K(P_new, R_b, H_a_b_est)
+
+        # Update global attitude quaternion, state vector, and state covariance
+        # estimates.
+        update = K @ r_b
+        a_post = update[:3, :]
+        bias_post = x_new[4:, :] + update[3:, :]
+
+        # Use Joseph form for covariance update.
+        P_post = joseph_P(P_new, K, H_a_b_est, R_b)
+
+        # Remember to update global attitude estimate.
+        b_post = MEKF.update_b(x_new[:4, :], a_post)
+
+        # Build x_aug_post
+        x_aug_post = jnp.vstack(
+            [a_post, b_post, bias_post]
+        )
+
+        return x_aug_post, P_post

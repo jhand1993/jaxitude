@@ -33,7 +33,7 @@ def tangent(
     return jacfwd(
         f,
         argnums=argnum
-    )(*ref_vector).reshape((n_out, ref_vector[0].shape[0]))
+    )(ref_vector).reshape((n_out, ref_vector.shape[0]))
 
 
 def linearize(
